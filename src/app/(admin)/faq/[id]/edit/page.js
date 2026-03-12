@@ -7,9 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { BiComment } from "react-icons/bi";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import { MOCK_FAQS } from "../../data";
+import dynamic from "next/dynamic";
+
+const CKEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-react").then((mod) => mod.CKEditor),
+  { ssr: false }
+);
+
+const ClassicEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-build-classic"),
+  { ssr: false }
+);
 
 export default function EditFaqPage() {
   const router = useRouter();

@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import { FaSave } from "react-icons/fa";
 import { MOCK_CONTENT_ITEMS } from "./data";
+
+const CKEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-react").then((mod) => mod.CKEditor),
+  { ssr: false }
+);
+
+const ClassicEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-build-classic"),
+  { ssr: false }
+);
+
 
 const TABS = [
   { id: "privacy", label: "Privacy Policy" },

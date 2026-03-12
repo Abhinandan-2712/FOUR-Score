@@ -2,13 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { BiComment } from "react-icons/bi";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+
+const CKEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-react").then((mod) => mod.CKEditor),
+  { ssr: false }
+);
+
+const ClassicEditor = dynamic(
+  () => import("@ckeditor/ckeditor5-build-classic"),
+  { ssr: false }
+);
 
 export default function NewFaqPage() {
   const router = useRouter();
