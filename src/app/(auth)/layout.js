@@ -1,24 +1,21 @@
-
 export default function AuthLayout({ children }) {
   return (
-    <div className="flex min-h-screen">
-      {/* Left side (logo / image) */}
-      <div className="hidden md:flex w-1/2 bg-gradient-to-l from-blue-200 via-blue-300 to-blue-400
- items-center justify-center p-8">
-        <div className="text-center text-white">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className="mx-auto w-auto h-48 mb-6 drop-shadow-lg"
-          />
-          {/* <h2 className="text-3xl font-extrabold">Medi-Pillpal</h2>
-          <p className="mt-2 text-lg">Welcome to our platform 🚀</p> */}
+    <div className="min-h-screen flex items-center justify-center bg-[#0A3161] px-4 py-8">
+      {/* Main off-white card with rounded corners */}
+      <div className="w-full max-w-5xl bg-[#FAFAFA] rounded-[24px] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+        {/* Left section - Login form (wider) */}
+        <div className="flex-1 flex flex-col  p-8 md:p-10 lg:p-12  justify-center">
+          {children}
         </div>
-      </div>
 
-      {/* Right side (auth pages like login, signup, forgot-password) */}
-      <div className="flex w-full md:w-1/2 items-center justify-center p-6">
-        <div className="w-full max-w-md">{children}</div>
+        {/* Right section - Image (narrower) */}
+        <div className="relative w-full md:w-[50%] min-h-[300px] md:min-h-0">
+          <img
+            src="/login.png"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center rounded-b-[24px] md:rounded-b-none md:rounded-r-[24px]"
+          />
+        </div>
       </div>
     </div>
   );

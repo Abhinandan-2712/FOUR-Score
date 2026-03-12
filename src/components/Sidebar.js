@@ -1,49 +1,84 @@
 "use client";
 
-import { Home, Users, Settings, LogOut } from "lucide-react";
+import {  FaRegFileAlt,FaRegHeart, FaSignOutAlt } from "react-icons/fa";
+import { MdDashboard } from "react-icons/md";
+import { TbActivityHeartbeat } from "react-icons/tb";
+import { LiaDumbbellSolid } from "react-icons/lia";
+import { LuUsers, LuApple } from "react-icons/lu";      
+import { BiBell, BiComment } from "react-icons/bi";
+import { HiOutlineCog } from "react-icons/hi";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  MdOutlineNotificationsActive,
-  MdOutlinePrivacyTip,
-} from "react-icons/md";
-import { TbTransactionDollar } from "react-icons/tb";
-import { GoCodeOfConduct } from "react-icons/go";
-import { FaQuestion } from "react-icons/fa";
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   const links = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
-    { href: "/users", label: "User Management", icon: Users },
+    { href: "/dashboard", label: "Dashboard", icon: MdDashboard },
+    { href: "/users", label: "User", icon: LuUsers },
+    {
+      href: "/exercise-library",
+      label: "Exercise Library",
+      icon: LiaDumbbellSolid,
+    },
+    { 
+      href: "/nutrition-macros", 
+      label: "Nutrition & Macros", 
+      icon: LuApple 
+    },
+    {
+      href: "/recovery-content",
+      label: "Recovery Content",
+      icon: FaRegHeart,
+    },
     {
       href: "/notification",
-      label: "Notification",
-      icon: MdOutlineNotificationsActive,
+      label: "Notifications",
+      icon: BiBell,
     },
-    { href: "/transaction", label: "Transaction", icon: TbTransactionDollar },
+    // {
+    //   href: "/faq",
+    //   label: "FAQ",
+    //   icon: BiComment,
+    // },
+    // { 
+    //   href: "/unity-community", 
+    //   label: "Unity (Community)", 
+    //   icon: BiComment 
+    // },
+    { 
+      href: "/active-users-today", 
+      label: "Active Users Today", 
+      icon: TbActivityHeartbeat 
+    },
+    { 
+      href: "/content-management", 
+      label: "Content Management", 
+      icon: FaRegFileAlt 
+    },
     {
-      href: "/privacy-policy",
-      label: "Privacy and Policy",
-      icon: MdOutlinePrivacyTip,
+      href: "/settings",
+      label: "Settings",
+      icon: HiOutlineCog,
     },
-    { href: "/term-contions", label: "Terms and Conditions", icon: GoCodeOfConduct },
-    { href: "/faq", label: "FAQ", icon: FaQuestion },
   ];
 
   return (
-    <div className="min-h-screen h-full w-64 bg-gradient-to-b from-blue-300 to-blue-600 text-white flex flex-col shadow-lg">
+    <div className="min-h-screen h-full w-64 bg-[#0A3161] text-white flex flex-col shadow-lg">
       {/* Logo */}
-      <div className="p-4 text-center border-b border-blue-500">
+      <div className=" flex p-4 text-center border-b border-[#0D3D7A]">
         <Image
-          src="/logo.png" // ✅ absolute path from the public folder
+          src="/logo.jpg" // ✅ absolute path from the public folder
           alt="Medi Admin Logo"
-          width={200}
-          height={80}
-          className="h-20 p-1 mx-auto"
+          width={100}
+          height={40}
+          className="h-18 p-1 mx-auto rounded-3xl"
         />{" "}
+        <div className="flex flex-col items-center justify-center">
+          <h1 className="text-xl font-bold">FOUR Score</h1>
+          <p className="text-sm text-gray-400">Admin Panel</p>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -55,10 +90,9 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={`flex items-center gap-3 p-3 rounded-4xl transition 
-                ${
-                  active
-                    ? "bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 text-white font-semibold "
-                    : "hover:bg-blue-700"
+                ${active
+                  ? "bg-[#0D3D7A] text-white font-semibold "
+                  : "hover:bg-[#0D3D7A]"
                 }`}
             >
               <Icon className="w-5 h-5" />
@@ -69,12 +103,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      {/* <div className="p-4 border-t border-blue-500">
-        <button className="flex items-center gap-3 p-3 w-full rounded-lg hover:bg-blue-700 transition">
-          <LogOut className="w-5 h-5" />
+      <div className="p-4 border-t border-[#0D3D7A]">
+        <button className="flex items-center gap-3 p-3 w-full rounded-full hover:bg-[#0D3D7A] transition">
+          <FaSignOutAlt className="w-5 h-5" />
           <span>Logout</span>
         </button>
-      </div> */}
+      </div>
     </div>
   );
 }

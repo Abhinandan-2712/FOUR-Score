@@ -29,7 +29,7 @@ import Navbar from "@/components/Navbar";
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F2F5FA]">
       {/* Sidebar */}
       <aside className="hidden sm:block fixed top-0 left-0 h-screen w-64 bg-white shadow-md z-50">
          <Sidebar />

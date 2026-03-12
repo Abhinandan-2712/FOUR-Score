@@ -12,10 +12,18 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { LuUsers } from "react-icons/lu";   
+import { TbActivityHeartbeat } from "react-icons/tb";
+import { GoTrophy } from "react-icons/go";
+import { LiaDumbbellSolid } from "react-icons/lia";
+
+
 
 import RevenueChart from "./components/RevenueChart";
 import TransactionsChart from "./components/TransactionsChart";
 import StatusDoughnut from "./components/UserDistributionChart";
+import UserGrowthChart from "./components/UserGrowthChart";
+import ActiveUsersWeekChart from "./components/ActiveUsersWeekChart";
 
 ChartJS.register(
   CategoryScale,
@@ -70,11 +78,11 @@ export default function Dashboard() {
   };
 
   const revenueData = {
-    labels: ["Jan", "Feb", "Mar", "Apr"],
+    labels: ["Jan", "Feb", "Mar", "Apr", "may", "jun"],
     datasets: [
       {
         label: "Revenue",
-        data: [4000, 5000, 4500, 6000],
+        data: [4000, 5000, 4500, 7000, 3200, 5200],
         borderColor: "#4f46e5",
         backgroundColor: (ctx) => {
           const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
@@ -143,54 +151,96 @@ export default function Dashboard() {
     ],
   };
 
+  // User Growth Chart Data (Monthly new user registrations)
+  const userGrowthData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        label: "New Users",
+        data: [250, 300, 450, 550, 700, 850],
+        borderColor: "#0A3161",
+        backgroundColor: (ctx) => {
+          const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, "rgba(10,49,97,0.3)");
+          gradient.addColorStop(1, "rgba(10,49,97,0)");
+          return gradient;
+        },
+        pointBackgroundColor: "#0A3161",
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.4,
+        fill: true,
+      },
+    ],
+  };
+
+  // Active Users This Week Chart Data (Daily active user count)
+  const activeUsersWeekData = {
+    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    datasets: [
+      {
+        label: "Active Users",
+        data: [550, 620, 590, 730, 660, 800, 700],
+        backgroundColor: "#0A3161",
+        borderRadius: 6,
+        barThickness: 40,
+      },
+    ],
+  };
+
   return (
     <div className="my-10 min-h-[80vh] h-auto">
       {/* Cards */}
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-4">
         <Card
-          title="Total Guardians"
+          title="Total Users"
           amount={1232}
           percentage={12}
           isIncrease={false}
-          para="Parents Who Have Visited So Far"
+          para="from last month"
+          icon={LuUsers}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
         />
         <Card
-          title="Total Patients"
+          title="Active Today"
           amount={980}
           percentage={8}
           isIncrease={true}
-          para="Patients Registered Till Date"
+          para="from last month"
+          icon={TbActivityHeartbeat}
+          iconBg="bg-green-100"
+          iconColor="text-green-600"
         />
         <Card
-          title="Total Caretakers"
+          title="Total Programs"
           amount={320}
           percentage={5}
           isIncrease={true}
-          para="Active Caretakers So Far"
+          para="from last month"
+          icon={GoTrophy}
+          iconBg="bg-amber-100"
+          iconColor="text-amber-600"
         />
         <Card
-          title="Total Revenue Generated"
-          amount={45789}
+          title="Exercises"
+          amount={156}
           percentage={15}
           isIncrease={true}
-          para="Overall Revenue Generated Till Now"
-          isCurrency
+          para="from last month"
+          icon={LiaDumbbellSolid}
+          iconBg="bg-rose-100"
+          iconColor="text-rose-600"
         />
-        <Card
-          title="Total Transactions Processed"
-          amount={12500}
-          percentage={10}
-          isIncrease={true}
-          para="Successful Transactions Completed"
-        />
+       
       </div>
 
       {/* Charts */}
-      {/* <div className="grid gap-6 md:grid-cols-2 my-10">
-        <RevenueChart data={revenueData} baseOptions={baseOptions} />
-        <TransactionsChart data={txData} baseOptions={baseOptions} />
+      <div className="grid gap-6 md:grid-cols-2 my-10">
+        <UserGrowthChart data={userGrowthData} baseOptions={baseOptions} />
+        <ActiveUsersWeekChart data={activeUsersWeekData} baseOptions={baseOptions} />
       </div>
-      <div className="grid gap-6 md:grid-cols-3 my-10">
+      {/* <div className="grid gap-6 md:grid-cols-3 my-10">
         <UserDistributionChart data={userData} baseOptions={baseOptions} />
         <StatusDoughnut
           title="Guardians Status"

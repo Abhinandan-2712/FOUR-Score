@@ -23,9 +23,9 @@ export default function Button({ children, onClick }) {
       onClick={onClick}
       className="
         px-5 py-2 rounded-full
-        bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800
+        bg-[#0D3D7A]
         text-white font-semibold
-        shadow-md hover:from-blue-500 hover:via-blue-700 hover:to-blue-900
+        shadow-md hover:bg-[#0D3D7A]
         hover:shadow-lg transform hover:scale-105
         transition-all duration-300 ease-out
       "

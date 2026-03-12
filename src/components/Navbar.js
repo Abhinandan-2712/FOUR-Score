@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {Button} from "@/components/ui/button";
-import { FiMenu, FiX } from "react-icons/fi"; // hamburger & close icons
+import { FiMenu, FiX } from "react-icons/fi"; 
 import Sidebar from "@/components/Sidebar";
 
 export default function Navbar() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // 👉 sidebar toggle state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
 
   const handleLogout = () => {
-    console.log("User logged out");
+    // console.log("User logged out");
+    localStorage.removeItem("token");
     setIsModalOpen(false);
+    // window.location.href = "/login";
+    router.replace("/login");
   };
 
   return (
