@@ -2,20 +2,30 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
 import { FaUtensils } from "react-icons/fa";
+import { toast } from "react-hot-toast";
 
 export default function NewNutritionPage() {
   const router = useRouter();
+  const [foodName, setFoodName] = useState("");
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fats, setFats] = useState("");
   const [category, setCategory] = useState("Breakfast");
   const [mealType, setMealType] = useState("Vegetarian");
   const [status, setStatus] = useState("Active");
+  const [description, setDescription] = useState("");
+  const [alternateFood, setAlternateFood] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imageError, setImageError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryOptions = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const mealTypeOptions = ["Vegetarian", "Non-Vegetarian", "Vegan"];
@@ -61,6 +71,8 @@ export default function NewNutritionPage() {
             Food Item Name <span className="text-red-500">*</span>
           </label>
           <Input
+            value={foodName}
+            onChange={(e) => setFoodName(e.target.value)}
             className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
             placeholder="Enter food item name"
           />
@@ -113,6 +125,8 @@ export default function NewNutritionPage() {
             </label>
             <Input
               type="number"
+              value={calories}
+              onChange={(e) => setCalories(e.target.value)}
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
             />
@@ -125,6 +139,8 @@ export default function NewNutritionPage() {
               type="number"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
+              value={protein}
+              onChange={(e) => setProtein(e.target.value)}
             />
           </div>
           <div>
@@ -135,6 +151,8 @@ export default function NewNutritionPage() {
               type="number"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
+              value={carbs}
+              onChange={(e) => setCarbs(e.target.value)}
             />
           </div>
           <div>
@@ -145,6 +163,8 @@ export default function NewNutritionPage() {
               type="number"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
+              value={fats}
+              onChange={(e) => setFats(e.target.value)}
             />
           </div>
         </div>
@@ -276,6 +296,8 @@ export default function NewNutritionPage() {
             rows={4}
             className="mt-1.5 w-full border border-[#C8D7E9] rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30 resize-none"
             placeholder="Enter nutritional information and description..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
         </div>
 
@@ -287,6 +309,8 @@ export default function NewNutritionPage() {
           <Input
             className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
             placeholder="Enter alternate food item..."
+            value={alternateFood}
+            onChange={(e) => setAlternateFood(e.target.value)}
           />
         </div>
 
@@ -303,9 +327,73 @@ export default function NewNutritionPage() {
           <Button
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
-            onClick={() => console.log("Add Nutrition Item")}
+            onClick={async () => {
+              try {
+                if (
+                  !foodName.trim() ||
+                  !category ||
+                  !mealType ||
+                  !String(calories).trim() ||
+                  !String(protein).trim() ||
+                  !String(carbs).trim() ||
+                  !String(fats).trim() ||
+                  !description.trim()
+                ) {
+                  toast.error("Please fill in all required fields.");
+                  return;
+                }
+
+                const token = localStorage.getItem("token");
+                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+                if (!baseUrl) {
+                  toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+                  return;
+                }
+                if (!token) {
+                  toast.error("Session expired. Please login again.");
+                  return;
+                }
+
+                setIsSubmitting(true);
+
+                const formData = new FormData();
+                formData.append("name", foodName.trim());
+                formData.append("category", category);
+                formData.append("mealType", mealType);
+                formData.append("calories", String(calories).trim());
+                formData.append("protein", String(protein).trim());
+                formData.append("carbs", String(carbs).trim());
+                formData.append("fats", String(fats).trim());
+                formData.append("description", description.trim());
+                formData.append("alternateFood", alternateFood.trim());
+                formData.append("status", status || "Active");
+                if (imageFile) formData.append("image", imageFile);
+
+                const res = await axios.post(
+                  `${baseUrl}/api/admin/add-nutrition-items`,
+                  formData,
+                  { headers: { token } }
+                );
+                console.log(res);
+
+                if (res?.data?.success) {
+                  toast.success(res?.data?.message || "Nutrition item added successfully!");
+                  router.push("/nutrition-macros");
+                } else {
+                  toast.error(res?.data?.message || "Failed to add nutrition item");
+                }
+              } catch (err) {
+                console.error("Add nutrition item failed:", err?.response?.data || err?.message);
+                toast.error(err?.response?.data?.message || "Failed to add nutrition item");
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            disabled={isSubmitting}
+            aria-disabled={isSubmitting}
           >
-            Add Nutrition Item
+            {isSubmitting ? "Adding..." : "Add Nutrition Item"}
           </Button>
         </div>
       </div>

@@ -2,10 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
 import { LiaDnaSolid } from "react-icons/lia";
+import { toast } from "react-hot-toast";
 
 export default function NewExercisePage() {
   const router = useRouter();
@@ -13,8 +15,14 @@ export default function NewExercisePage() {
   const [mediaType, setMediaType] = useState("Video");
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaError, setMediaError] = useState("");
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  // Backend curl examples me "none" bheja ja raha hai, isliye default yahi rakhte hain.
+  const [instructions, setInstructions] = useState("none");
+  const [alternateExercise, setAlternateExercise] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const difficultyOptions = ["Beginner", "Intermediate", "Advanced"];
   const mediaOptions = ["Video", "Image", "GIF"];
@@ -61,6 +69,8 @@ export default function NewExercisePage() {
               Exercise Title <span className="text-red-500">*</span>
             </label>
             <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="Enter exercise title"
             />
@@ -71,6 +81,8 @@ export default function NewExercisePage() {
               Category <span className="text-red-500">*</span>
             </label>
             <Input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="Enter category (e.g., Chest)"
             />
@@ -229,6 +241,8 @@ export default function NewExercisePage() {
             rows={4}
             className="mt-1.5 w-full border border-[#C8D7E9] rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30 resize-none"
             placeholder="Enter exercise instructions..."
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
           />
         </div>
 
@@ -240,6 +254,8 @@ export default function NewExercisePage() {
             </span>
           </label>
           <Input
+            value={alternateExercise}
+            onChange={(e) => setAlternateExercise(e.target.value)}
             className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
             placeholder="Enter alternate exercise..."
           />
@@ -258,9 +274,84 @@ export default function NewExercisePage() {
           <Button
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
-            onClick={() => console.log("Add Exercise")}
+            onClick={async () => {
+              try {
+                if (!title.trim() || !category.trim()) {
+                  toast.error("Please fill Title and Category.");
+                  return;
+                }
+
+                const token = localStorage.getItem("token");
+                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+                if (!baseUrl) {
+                  toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+                  return;
+                }
+                if (!token) {
+                  toast.error("Session expired. Please login again.");
+                  return;
+                }
+
+                setIsSubmitting(true);
+
+                const instructionsValue = instructions.trim() ? instructions.trim() : "none";
+
+                // If backend expects email, we can derive it from JWT payload.
+                const tokenPayload = (() => {
+                  if (!token) return null;
+                  try {
+                    const base64Url = token.split(".")[1];
+                    if (!base64Url) return null;
+                    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+                    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
+                    return JSON.parse(atob(padded));
+                  } catch (e) {
+                    return null;
+                  }
+                })();
+
+                const emailFromToken = tokenPayload?.email;
+
+                const formData = new FormData();
+                formData.append("title", title.trim());
+                formData.append("category", category.trim());
+                formData.append("difficultyLevel", difficulty);
+                formData.append("mediaType", mediaType);
+                formData.append("instructions", instructionsValue);
+                formData.append("alternateExercise", alternateExercise.trim());
+                if (emailFromToken) formData.append("email", emailFromToken);
+
+                // Optional: backend accepts request even without a file (like your curl).
+                // If user selected a file, send it using the backend-expected field name.
+                if (mediaFile) {
+                  formData.append("media", mediaFile);
+                }
+
+                const res = await axios.post(
+                  `${baseUrl}/api/admin/exercises`,
+                  formData,
+                  { headers: { token } }
+                );
+                console.log(res);
+
+                if (res?.data?.success) {
+                  toast.success("Exercise added successfully!");
+                  router.push("/exercise-library");
+                } else {
+                  toast.error(res?.data?.message || "Failed to add exercise");
+                }
+              } catch (err) {
+                console.error("Add exercise failed:", err?.response?.data || err?.message);
+                toast.error(err?.response?.data?.message || "Failed to add exercise");
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            disabled={isSubmitting}
+            aria-disabled={isSubmitting}
           >
-            Add Exercise
+            {isSubmitting ? "Adding..." : "Add Exercise"}
           </Button>
         </div>
       </div>

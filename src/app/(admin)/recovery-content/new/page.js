@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
@@ -9,13 +11,17 @@ import { FaRegHeart } from "react-icons/fa";
 
 export default function NewRecoveryPage() {
   const router = useRouter();
+  const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Breathing");
   const [contentType, setContentType] = useState("Video");
   const [status, setStatus] = useState("Active");
+  const [durationOrTarget, setDurationOrTarget] = useState("");
+  const [description, setDescription] = useState("");
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaError, setMediaError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryOptions = [
     "Breathing",
@@ -79,6 +85,69 @@ export default function NewRecoveryPage() {
     setMediaFile(file);
   };
 
+  const handleAdd = async () => {
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    const titleValue = title.trim();
+    const descValue = description.trim();
+
+    if (!titleValue || !category || !contentType || !descValue) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (contentType !== "Article" && !mediaFile) {
+      toast.error(`Please upload a ${contentType.toLowerCase()} file`);
+      return;
+    }
+    if (mediaError) {
+      toast.error(mediaError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("category", category);
+      formData.append("contentType", contentType);
+      formData.append("title", titleValue);
+      formData.append("description", descValue);
+      formData.append("durationOrTarget", durationOrTarget.trim());
+      formData.append("status", status || "Active");
+
+      if (mediaFile) {
+        // Backend uses multer; common field is "media".
+        formData.append("media", mediaFile);
+      }
+
+      const res = await axios.post(`${baseUrl}/api/admin/add-recovery-content`, formData, {
+        headers: { token },
+      });
+
+      if (res?.data?.success) {
+        toast.success(res?.data?.message || "Recovery content added successfully!");
+        router.push("/recovery-content");
+      } else {
+        toast.error(res?.data?.message || "Failed to add recovery content");
+      }
+    } catch (err) {
+      console.error("Add recovery content failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to add recovery content");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-[80vh] py-8 px-1">
       {/* Header */}
@@ -115,6 +184,8 @@ export default function NewRecoveryPage() {
           <Input
             className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
             placeholder="Enter recovery content title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
         </div>
 
@@ -162,7 +233,7 @@ export default function NewRecoveryPage() {
         </div>
 
         {/* Status */}
-        {/* <div className="mt-6">
+        <div className="mt-6">
           <label className="text-sm font-medium text-[#0A3161]">Status</label>
           <div className="mt-2 grid gap-3 md:grid-cols-2">
             {["Active", "Inactive"].map((opt) => (
@@ -176,7 +247,7 @@ export default function NewRecoveryPage() {
               </button>
             ))}
           </div>
-        </div> */}
+        </div>
 
         {/* Upload Media (if not Article) */}
         {contentType !== "Article" && (
@@ -261,6 +332,19 @@ export default function NewRecoveryPage() {
             rows={4}
             className="mt-1.5 w-full border border-[#C8D7E9] rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30 resize-none"
             placeholder="Enter recovery content description..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        {/* Duration / Target */}
+        <div className="mt-6">
+          <label className="text-sm font-medium text-[#0A3161]">Duration / Target</label>
+          <Input
+            className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
+            placeholder='e.g., "10 min" or "3 sets" (optional)'
+            value={durationOrTarget}
+            onChange={(e) => setDurationOrTarget(e.target.value)}
           />
         </div>
 
@@ -271,15 +355,17 @@ export default function NewRecoveryPage() {
             variant="outline"
             className="w-full justify-center"
             onClick={() => router.push("/recovery-content")}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
-            onClick={() => console.log("Add Recovery Content")}
+            onClick={handleAdd}
+            disabled={isSubmitting}
           >
-            Add Recovery Content
+            {isSubmitting ? "Adding..." : "Add Recovery Content"}
           </Button>
         </div>
       </div>

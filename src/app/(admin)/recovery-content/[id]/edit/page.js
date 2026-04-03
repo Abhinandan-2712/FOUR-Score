@@ -2,17 +2,17 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
 import { FaRegHeart } from "react-icons/fa";
-import { MOCK_RECOVERY_CONTENT } from "../../data";
 import { toast } from "react-hot-toast";
 
 export default function EditRecoveryPage() {
   const router = useRouter();
   const params = useParams();
-  const itemId = parseInt(params.id);
+  const itemId = params?.id;
 
   const [recoveryItem, setRecoveryItem] = useState(null);
   const [title, setTitle] = useState("");
@@ -20,10 +20,12 @@ export default function EditRecoveryPage() {
   const [contentType, setContentType] = useState("Video");
   const [status, setStatus] = useState("Active");
   const [description, setDescription] = useState("");
+  const [durationOrTarget, setDurationOrTarget] = useState("");
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaError, setMediaError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryOptions = [
     "Breathing",
@@ -39,20 +41,22 @@ export default function EditRecoveryPage() {
   const contentTypeOptions = ["Video", "Article", "Audio", "Image"];
 
   useEffect(() => {
-    // Find recovery item by ID
-    const foundItem = MOCK_RECOVERY_CONTENT.find((r) => r.id === itemId);
-    if (foundItem) {
-      setRecoveryItem(foundItem);
-      setTitle(foundItem.title || "");
-      setCategory(foundItem.category || "Breathing");
-      setContentType(foundItem.contentType || "Video");
-      setStatus(foundItem.status || "Active");
-      setDescription(foundItem.description || "");
-    } else {
-      toast.error("Recovery content not found");
-      router.push("/recovery-content");
+    try {
+      const raw = sessionStorage.getItem("recovery_edit_item");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed) return;
+      setRecoveryItem(parsed);
+      setTitle(parsed.title || "");
+      setCategory(parsed.category || "Breathing");
+      setContentType(parsed.contentType || "Video");
+      setStatus(parsed.status || "Active");
+      setDescription(parsed.description || "");
+      setDurationOrTarget(parsed.durationOrTarget || "");
+    } catch {
+      // ignore
     }
-  }, [itemId, router]);
+  }, []);
 
   const chipClasses = (active) =>
     `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center transition-all ${
@@ -103,16 +107,69 @@ export default function EditRecoveryPage() {
     setMediaFile(file);
   };
 
-  const handleSave = () => {
-    if (!title || !category || !description) {
+  const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    const titleValue = title.trim();
+    const descValue = description.trim();
+
+    if (!titleValue || !category || !contentType || !descValue) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // Here you would typically make an API call to update the recovery content
-    // For now, we'll just show a success message
-    toast.success(`Recovery content "${title}" updated successfully!`);
-    router.push("/recovery-content");
+    if (contentType !== "Article" && mediaError) {
+      toast.error(mediaError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("category", category);
+      formData.append("contentType", contentType);
+      formData.append("title", titleValue);
+      formData.append("description", descValue);
+      formData.append("durationOrTarget", durationOrTarget.trim());
+      formData.append("status", status || "Active");
+
+      if (mediaFile) {
+        formData.append("media", mediaFile);
+      }
+
+      const res = await axios.put(
+        `${baseUrl}/api/admin/update-recovery-content/${itemId}`,
+        formData,
+        { headers: { token } }
+      );
+
+      if (res?.data?.success) {
+        toast.success(res?.data?.message || "Recovery content updated successfully!");
+        try {
+          sessionStorage.removeItem("recovery_edit_item");
+        } catch {
+          // ignore
+        }
+        router.push("/recovery-content");
+      } else {
+        toast.error(res?.data?.message || "Failed to update recovery content");
+      }
+    } catch (err) {
+      console.error("Update recovery content failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to update recovery content");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!recoveryItem) {
@@ -222,6 +279,17 @@ export default function EditRecoveryPage() {
           </div>
         </div>
 
+        {/* Duration / Target */}
+        <div className="mt-6">
+          <label className="text-sm font-medium text-[#0A3161]">Duration / Target</label>
+          <Input
+            className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
+            placeholder='e.g., "10 min" or "3 sets" (optional)'
+            value={durationOrTarget}
+            onChange={(e) => setDurationOrTarget(e.target.value)}
+          />
+        </div>
+
         {/* Upload Media (if not Article) */}
         {contentType !== "Article" && (
           <div className="mt-6">
@@ -317,6 +385,7 @@ export default function EditRecoveryPage() {
             variant="outline"
             className="w-full justify-center"
             onClick={() => router.push("/recovery-content")}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
@@ -324,8 +393,9 @@ export default function EditRecoveryPage() {
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
             onClick={handleSave}
+            disabled={isSubmitting}
           >
-            Update Recovery Content
+            {isSubmitting ? "Updating..." : "Update Recovery Content"}
           </Button>
         </div>
       </div>

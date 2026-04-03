@@ -58,23 +58,20 @@ export default function Navbar() {
             onClick={() => setIsSidebarOpen(false)}
           ></div>
 
-          {/* Sidebar content */}
-          <aside className="fixed top-0 left-0 h-full w-64 shadow-lg z-50 transition-transform duration-300 sm:hidden ">
-            <div className=" relative">
-              <div className="flex justify-between items-center absolute z-50 ">
-                {/* <h2 className="text-lg font-semibold">Menu</h2> */}
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="text-2xl text-gray-700"
-                  aria-label="Close Sidebar"
-                >
-                  <FiX />
-                </button>
-              </div>
-              {/* 👉 Your sidebar links/components go here */}
-              <div className=" absolute">
-                <Sidebar />
-              </div>
+          {/* Sidebar content — height constrained so nav list scrolls */}
+          <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh w-64 flex-col bg-[#0A3161] shadow-lg transition-transform duration-300 sm:hidden">
+            <div className="flex shrink-0 items-center justify-end border-b border-[#0D3D7A] px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="rounded-lg p-2 text-2xl text-white/90 hover:bg-white/10"
+                aria-label="Close sidebar"
+              >
+                <FiX />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              <Sidebar />
             </div>
           </aside>
         </>

@@ -2,17 +2,17 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
 import { FaUtensils } from "react-icons/fa";
-import { MOCK_NUTRITION_ITEMS } from "../../data";
 import { toast } from "react-hot-toast";
 
 export default function EditNutritionPage() {
   const router = useRouter();
   const params = useParams();
-  const itemId = parseInt(params.id);
+  const itemId = params?.id;
 
   const [nutritionItem, setNutritionItem] = useState(null);
   const [foodItem, setFoodItem] = useState("");
@@ -29,30 +29,32 @@ export default function EditNutritionPage() {
   const [imageError, setImageError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryOptions = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const mealTypeOptions = ["Vegetarian", "Non-Vegetarian", "Vegan"];
 
   useEffect(() => {
-    // Find nutrition item by ID
-    const foundItem = MOCK_NUTRITION_ITEMS.find((n) => n.id === itemId);
-    if (foundItem) {
-      setNutritionItem(foundItem);
-      setFoodItem(foundItem.foodItem || "");
-      setCategory(foundItem.category || "Breakfast");
-      setMealType(foundItem.mealType || "Vegetarian");
-      setCalories(foundItem.calories?.toString() || "");
-      setProtein(foundItem.protein?.toString() || "");
-      setCarbs(foundItem.carbs?.toString() || "");
-      setFats(foundItem.fats?.toString() || "");
-      setStatus(foundItem.status || "Active");
-      setDescription(foundItem.description || "");
-      setAlternateFood(foundItem.alternateFood || "");
-    } else {
-      toast.error("Nutrition item not found");
-      router.push("/nutrition-macros");
+    try {
+      const raw = sessionStorage.getItem("nutrition_edit_item");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed) return;
+      setNutritionItem(parsed);
+      setFoodItem(parsed.foodItem || "");
+      setCategory(parsed.category || "Breakfast");
+      setMealType(parsed.mealType || "Vegetarian");
+      setCalories(parsed.calories?.toString?.() || String(parsed.calories ?? ""));
+      setProtein(parsed.protein?.toString?.() || String(parsed.protein ?? ""));
+      setCarbs(parsed.carbs?.toString?.() || String(parsed.carbs ?? ""));
+      setFats(parsed.fats?.toString?.() || String(parsed.fats ?? ""));
+      setStatus(parsed.status || "Active");
+      setDescription(parsed.description || "");
+      setAlternateFood(parsed.alternateFood || "");
+    } catch {
+      // ignore
     }
-  }, [itemId, router]);
+  }, []);
 
   const chipClasses = (active) =>
     `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center transition-all ${
@@ -83,16 +85,75 @@ export default function EditNutritionPage() {
     setImageFile(file);
   };
 
-  const handleSave = () => {
-    if (!foodItem || !category || !calories || !protein || !carbs || !fats) {
-      toast.error("Please fill in all required fields");
+  const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
       return;
     }
 
-    // Here you would typically make an API call to update the nutrition item
-    // For now, we'll just show a success message
-    toast.success(`Nutrition item "${foodItem}" updated successfully!`);
-    router.push("/nutrition-macros");
+    if (
+      !foodItem.trim() ||
+      !category ||
+      !mealType ||
+      !String(calories).trim() ||
+      !String(protein).trim() ||
+      !String(carbs).trim() ||
+      !String(fats).trim() ||
+      !description.trim()
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (imageError) {
+      toast.error(imageError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", foodItem.trim());
+      formData.append("category", category);
+      formData.append("mealType", mealType);
+      formData.append("calories", String(calories).trim());
+      formData.append("protein", String(protein).trim());
+      formData.append("carbs", String(carbs).trim());
+      formData.append("fats", String(fats).trim());
+      formData.append("description", description.trim());
+      formData.append("alternateFood", alternateFood.trim());
+      formData.append("status", status || "Active");
+      if (imageFile) formData.append("image", imageFile);
+
+      const res = await axios.put(
+        `${baseUrl}/api/admin/update-nutrition-items/${itemId}`,
+        formData,
+        { headers: { token } }
+      );
+
+      if (res?.data?.success) {
+        toast.success(res?.data?.message || "Nutrition item updated successfully!");
+        try {
+          sessionStorage.removeItem("nutrition_edit_item");
+        } catch {
+          // ignore
+        }
+        router.push("/nutrition-macros");
+      } else {
+        toast.error(res?.data?.message || "Failed to update nutrition item");
+      }
+    } catch (err) {
+      console.error("Update nutrition item failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to update nutrition item");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!nutritionItem) {
@@ -348,6 +409,7 @@ export default function EditNutritionPage() {
             variant="outline"
             className="w-full justify-center"
             onClick={() => router.push("/nutrition-macros")}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
@@ -355,8 +417,9 @@ export default function EditNutritionPage() {
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
             onClick={handleSave}
+            disabled={isSubmitting}
           >
-            Update Nutrition Item
+            {isSubmitting ? "Updating..." : "Update Nutrition Item"}
           </Button>
         </div>
       </div>

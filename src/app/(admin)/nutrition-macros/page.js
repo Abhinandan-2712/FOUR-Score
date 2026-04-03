@@ -15,12 +15,31 @@ import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
 import { MdDeleteOutline } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import { MOCK_NUTRITION_ITEMS } from "./data";
+import axios from "axios";
 
 import DeleteNutritionModal from "./components/DeleteNutritionModal";
 import ViewNutritionModal from "./components/ViewNutritionModal";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
+
+function mapApiItemToRow(n) {
+  const createdAt = n?.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : "";
+  return {
+    id: n?._id ?? n?.id,
+    foodItem: n?.name ?? n?.foodItem ?? "",
+    category: n?.category ?? "",
+    mealType: n?.mealType ?? "",
+    calories: n?.calories ?? 0,
+    protein: n?.protein ?? 0,
+    carbs: n?.carbs ?? 0,
+    fats: n?.fats ?? 0,
+    status: n?.status ?? "Active",
+    description: n?.description ?? "",
+    alternateFood: n?.alternateFood ?? "",
+    imagePath: n?.imagePath ?? "",
+    createdAt,
+  };
+}
 
 export default function NutritionMacros() {
   const router = useRouter();
@@ -28,7 +47,10 @@ export default function NutritionMacros() {
   const [mealTypeFilter, setMealTypeFilter] = useState("all"); // 'all' | 'vegetarian' | 'non-vegetarian' | 'vegan'
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [nutritionItems, setNutritionItems] = useState(MOCK_NUTRITION_ITEMS);
+  const [nutritionItems, setNutritionItems] = useState([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
 
@@ -38,6 +60,12 @@ export default function NutritionMacros() {
   };
 
   const handleEdit = (id) => {
+    const item = nutritionItems.find((n) => n.id === id);
+    try {
+      if (item) sessionStorage.setItem("nutrition_edit_item", JSON.stringify(item));
+    } catch {
+      // ignore
+    }
     router.push(`/nutrition-macros/${id}/edit`);
   };
 
@@ -88,6 +116,43 @@ export default function NutritionMacros() {
     return [1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages];
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    const fetchNutrition = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      setIsFetching(true);
+      try {
+        // UI is client-side search + filters; fetch big chunk once.
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-nutrition-items`, {
+          headers: { token },
+          params: { page: 1, limit: 1000 },
+        });
+
+        const list = res?.data?.result?.items ?? [];
+        const mapped = Array.isArray(list) ? list.map(mapApiItemToRow) : [];
+        setNutritionItems(mapped);
+        setServerTotal(mapped.length);
+      } catch (err) {
+        console.error("Fetch nutrition items failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to fetch nutrition items");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchNutrition();
+  }, [refreshKey]);
+
   return (
     <div className="min-h-[80vh] py-8 px-1">
       <div className="flex items-center justify-between">
@@ -97,7 +162,7 @@ export default function NutritionMacros() {
           </h1>
 
           <p className="mt-1 text-sm text-[#2158A3]">
-            <span>Total: {nutritionItems.length}</span>
+            <span>Total: {serverTotal}</span>
             <span className="mx-2">|</span>
             <span className="text-green-600 font-normal">Active: {activeCount}</span>
             <span className="mx-2">|</span>
@@ -124,7 +189,7 @@ export default function NutritionMacros() {
 
         <div className="mt-4 flex gap-2">
           {[
-            { key: "all", label: `All (${nutritionItems.length})` },
+            { key: "all", label: `All (${serverTotal})` },
             { key: "vegetarian", label: `Vegetarian (${vegetarianCount})` },
             { key: "non-vegetarian", label: `Non-Vegetarian (${nonVegetarianCount})` },
             { key: "vegan", label: `Vegan (${veganCount})` },
@@ -162,7 +227,13 @@ export default function NutritionMacros() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white">
-            {paginatedItems.length > 0 ? (
+            {isFetching ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                  Loading nutrition items...
+                </TableCell>
+              </TableRow>
+            ) : paginatedItems.length > 0 ? (
               paginatedItems.map((item, idx) => (
                 <TableRow key={item.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
                   <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
@@ -335,12 +406,39 @@ export default function NutritionMacros() {
         open={!!deleteTarget}
         nutritionItem={deleteTarget}
         onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!deleteTarget) return;
-          const itemName = deleteTarget.foodItem;
-          setNutritionItems((prev) => prev.filter((n) => n.id !== deleteTarget.id));
-          setDeleteTarget(null);
-          toast.success(`Nutrition item "${itemName}" deleted successfully!`);
+          const token = localStorage.getItem("token");
+          const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+          if (!baseUrl) {
+            toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+            return;
+          }
+          if (!token) {
+            toast.error("Session expired. Please login again.");
+            return;
+          }
+
+          try {
+            const res = await axios.delete(
+              `${baseUrl}/api/admin/delete-nutrition-items/${deleteTarget.id}`,
+              { headers: { token } }
+            );
+
+            if (res?.data?.success) {
+              toast.success(res?.data?.message || "Nutrition item deleted successfully!");
+              setDeleteTarget(null);
+              setNutritionItems((prev) => prev.filter((n) => n.id !== deleteTarget.id));
+              setServerTotal((prev) => Math.max(0, Number(prev || 0) - 1));
+              setRefreshKey((k) => k + 1);
+            } else {
+              toast.error(res?.data?.message || "Failed to delete nutrition item");
+            }
+          } catch (err) {
+            console.error("Delete nutrition item failed:", err?.response?.data || err?.message);
+            toast.error(err?.response?.data?.message || "Failed to delete nutrition item");
+          }
         }}
       />
 

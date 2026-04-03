@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +17,15 @@ const TABS = [
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [hasFetchedSettings, setHasFetchedSettings] = useState(false);
 
   // General Settings
-  const [appName, setAppName] = useState("FOUR Score");
-  const [appDescription, setAppDescription] = useState("Fitness and wellness platform");
-  const [supportEmail, setSupportEmail] = useState("support@fourscore.com");
-  const [contactPhone, setContactPhone] = useState("+1 234 567 8900");
+  const [appName, setAppName] = useState("");
+  const [appDescription, setAppDescription] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
 
   // Email Settings
   const [smtpHost, setSmtpHost] = useState("smtp.gmail.com");
@@ -42,18 +46,112 @@ export default function SettingsPage() {
   const [requireLowercase, setRequireLowercase] = useState(true);
   const [requireNumbers, setRequireNumbers] = useState(true);
   const [requireSpecialChars, setRequireSpecialChars] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState(30);
+  const [sessionTimeout, setSessionTimeout] = useState(60);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [enforceStrongPasswords, setEnforceStrongPasswords] = useState(true);
 
   // Admin password change (UI only, no real API)
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully!");
+  useEffect(() => {
+    const load = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        setHasFetchedSettings(true);
+        return;
+      }
+      if (!token) {
+        setHasFetchedSettings(true);
+        return;
+      }
+
+      setIsLoadingSettings(true);
+      try {
+        const res = await axios.get(`${baseUrl}/api/admin/get-app-settings`, {
+          headers: { token },
+        });
+
+        const s = res?.data?.result;
+        if (!s) return;
+
+        setAppName(s.appName ?? "");
+        setAppDescription(s.appDescription ?? "");
+        setSupportEmail(s.supportEmail ?? "");
+        setContactPhone(s.contactPhone ?? "");
+
+        setTwoFactorEnabled(!!s.security?.twoFactorEnabled);
+        setSessionTimeout(Number(s.security?.sessionTimeoutMinutes ?? 60));
+        setEnforceStrongPasswords(
+          s.security?.enforceStrongPasswords === undefined
+            ? true
+            : !!s.security.enforceStrongPasswords
+        );
+      } catch (err) {
+        console.error("Load app settings failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to load app settings");
+      } finally {
+        setIsLoadingSettings(false);
+        setHasFetchedSettings(true);
+      }
+    };
+
+    load();
+  }, []);
+
+  const SkeletonBlock = ({ className }) => (
+    <div className={`animate-pulse rounded-lg bg-slate-200 ${className || ""}`} />
+  );
+
+  const showLoadingSkeleton = isLoadingSettings && !hasFetchedSettings;
+
+  const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    setIsSavingSettings(true);
+    try {
+      const formData = new FormData();
+      formData.append("appName", appName);
+      formData.append("appDescription", appDescription);
+      formData.append("supportEmail", supportEmail);
+      formData.append("contactPhone", contactPhone);
+
+      formData.append("twoFactorEnabled", String(twoFactorEnabled));
+      formData.append("sessionTimeoutMinutes", String(sessionTimeout));
+      formData.append("enforceStrongPasswords", String(enforceStrongPasswords));
+
+      const res = await axios.post(`${baseUrl}/api/admin/save-app-settings`, formData, {
+        headers: { token },
+      });
+
+      if (res?.data?.success) {
+        toast.success(res?.data?.message || "Settings saved successfully!");
+      } else {
+        toast.error(res?.data?.message || "Failed to save settings");
+      }
+    } catch (err) {
+      console.error("Save app settings failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to save settings");
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
       toast.error("Please fill in all password fields");
       return;
@@ -86,11 +184,62 @@ export default function SettingsPage() {
       return;
     }
 
-    // TODO: Replace with real API call
-    toast.success("Admin password updated (mock). Integrate API here.");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    const tokenPayload = (() => {
+      try {
+        const base64Url = token.split(".")[1];
+        if (!base64Url) return null;
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, "=");
+        return JSON.parse(atob(padded));
+      } catch {
+        return null;
+      }
+    })();
+
+    const emailFromToken = tokenPayload?.email;
+    if (!emailFromToken) {
+      toast.error("Could not read admin email from token. Please login again.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const formData = new FormData();
+      formData.append("email", emailFromToken);
+      formData.append("oldPassword", currentPassword);
+      formData.append("newPassword", newPassword);
+      formData.append("confirmPassword", confirmNewPassword);
+
+      const res = await axios.post(`${baseUrl}/api/admin/change-password`, formData, {
+        headers: { token },
+      });
+
+      if (res?.data?.success) {
+        toast.success(res?.data?.message || "Password updated successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+      } else {
+        toast.error(res?.data?.message || "Failed to update password");
+      }
+    } catch (err) {
+      console.error("Change password failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to update password");
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const chipClasses = (active) =>
@@ -129,7 +278,30 @@ export default function SettingsPage() {
       {/* Settings Content */}
       <div className="bg-white rounded-2xl border border-[#C8D7E9] shadow-md p-6 md:p-7">
         {/* General Settings */}
-        {activeTab === "general" && (
+        {activeTab === "general" && showLoadingSkeleton && (
+          <div className="space-y-6">
+            <SkeletonBlock className="h-5 w-40" />
+            <div className="space-y-2">
+              <SkeletonBlock className="h-4 w-28" />
+              <SkeletonBlock className="h-11 w-full" />
+            </div>
+            <div className="space-y-2">
+              <SkeletonBlock className="h-4 w-32" />
+              <SkeletonBlock className="h-24 w-full rounded-xl" />
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-2">
+                <SkeletonBlock className="h-4 w-28" />
+                <SkeletonBlock className="h-11 w-full" />
+              </div>
+              <div className="space-y-2">
+                <SkeletonBlock className="h-4 w-28" />
+                <SkeletonBlock className="h-11 w-full" />
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === "general" && !showLoadingSkeleton && (
           <div className="space-y-6">
             <h2 className="text-sm font-semibold text-[#0A3161] mb-4">General Settings</h2>
             
@@ -320,80 +492,88 @@ export default function SettingsPage() {
         )}
 
         {/* Security Settings */}
-        {activeTab === "security" && (
+        {activeTab === "security" && showLoadingSkeleton && (
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-xl border border-[#C8D7E9] bg-white">
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-44" />
+                  <SkeletonBlock className="h-3 w-56" />
+                </div>
+                <SkeletonBlock className="h-6 w-11 rounded-full" />
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl border border-[#C8D7E9] bg-white">
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-44" />
+                  <SkeletonBlock className="h-3 w-56" />
+                </div>
+                <SkeletonBlock className="h-6 w-11 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <SkeletonBlock className="h-4 w-44" />
+                <SkeletonBlock className="h-11 w-full" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <SkeletonBlock className="h-4 w-44" />
+              <SkeletonBlock className="h-3 w-72" />
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-28" />
+                  <SkeletonBlock className="h-11 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-28" />
+                  <SkeletonBlock className="h-11 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <SkeletonBlock className="h-4 w-36" />
+                  <SkeletonBlock className="h-11 w-full" />
+                </div>
+              </div>
+              <div className="flex justify-end mt-10">
+                <SkeletonBlock className="h-11 w-44" />
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === "security" && !showLoadingSkeleton && (
           <div className="space-y-8">
             {/* <h2 className="text-sm font-semibold text-[#0A3161] mb-2">Security Settings</h2> */}
 
-            {/* Password Policy */}
+            {/* App security (backend) */}
             {/* <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-[#2158A3]">
-                  Minimum Password Length <span className="text-red-500">*</span>
+              <div className="flex items-center justify-between p-4 rounded-xl border border-[#C8D7E9] bg-white">
+                <div>
+                  <p className="text-sm font-medium text-[#0A3161]">Two-factor authentication</p>
+                  <p className="text-xs text-[#5671A6] mt-1">Require 2FA for admin logins</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={twoFactorEnabled}
+                    onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
                 </label>
-                <Input
-                  type="number"
-                  min="6"
-                  max="20"
-                  className="mt-1.5 h-11 w-full rounded-lg border border-[#C8D7E9] bg-white px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
-                  value={minPasswordLength}
-                  onChange={(e) => setMinPasswordLength(Number(e.target.value))}
-                />
               </div>
 
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-[#2158A3]">Password Requirements</p>
-                
-                <div className="flex items-center justify-between p-3 rounded-lg border border-[#C8D7E9] bg-white">
-                  <span className="text-sm text-[#0A3161]">Require Uppercase Letters</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requireUppercase}
-                      onChange={(e) => setRequireUppercase(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
-                  </label>
+              <div className="flex items-center justify-between p-4 rounded-xl border border-[#C8D7E9] bg-white">
+                <div>
+                  <p className="text-sm font-medium text-[#0A3161]">Enforce strong passwords</p>
+                  <p className="text-xs text-[#5671A6] mt-1">Block weak passwords for admins</p>
                 </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-[#C8D7E9] bg-white">
-                  <span className="text-sm text-[#0A3161]">Require Lowercase Letters</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requireLowercase}
-                      onChange={(e) => setRequireLowercase(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-[#C8D7E9] bg-white">
-                  <span className="text-sm text-[#0A3161]">Require Numbers</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requireNumbers}
-                      onChange={(e) => setRequireNumbers(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-[#C8D7E9] bg-white">
-                  <span className="text-sm text-[#0A3161]">Require Special Characters</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requireSpecialChars}
-                      onChange={(e) => setRequireSpecialChars(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
-                  </label>
-                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enforceStrongPasswords}
+                    onChange={(e) => setEnforceStrongPasswords(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#0A3161]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0A3161]"></div>
+                </label>
               </div>
 
               <div>
@@ -403,7 +583,7 @@ export default function SettingsPage() {
                 <Input
                   type="number"
                   min="5"
-                  max="120"
+                  max="1440"
                   className="mt-1.5 h-11 w-full rounded-lg border border-[#C8D7E9] bg-white px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
                   value={sessionTimeout}
                   onChange={(e) => setSessionTimeout(Number(e.target.value))}
@@ -462,9 +642,11 @@ export default function SettingsPage() {
                 <Button
                   type="button"
                   onClick={handleChangePassword}
+                  disabled={isChangingPassword}
+                  aria-disabled={isChangingPassword}
                   className="bg-[#0A3161] hover:bg-[#0D3D7A] text-white font-medium px-6 gap-2"
                 >
-                  Update Password
+                  {isChangingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </div>
             </div>
@@ -472,16 +654,20 @@ export default function SettingsPage() {
         )}
 
         {/* Save Button */}
-        <div className="mt-8 pt-6 border-t border-[#E0E7F5]">
-          <Button
-            type="button"
-            onClick={handleSave}
-            className="bg-[#0A3161] hover:bg-[#0D3D7A] text-white font-medium px-6 gap-2"
-          >
-            <FaSave className="h-4 w-4" />
-            Save Settings
-          </Button>
-        </div>
+        {activeTab === "general" && (
+          <div className="mt-8 pt-6 border-t border-[#E0E7F5]">
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSavingSettings || isLoadingSettings}
+              aria-disabled={isSavingSettings || isLoadingSettings}
+              className="bg-[#0A3161] hover:bg-[#0D3D7A] text-white font-medium px-6 gap-2"
+            >
+              <FaSave className="h-4 w-4" />
+              {isSavingSettings ? "Saving..." : "Save Settings"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

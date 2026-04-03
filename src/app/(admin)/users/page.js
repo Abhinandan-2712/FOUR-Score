@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   Table,
   TableBody,
@@ -29,14 +30,18 @@ const MOCK_USERS = [
   { id: 8, name: "Anna Martinez", email: "anna@example.com", goal: "Muscle Gain", bodyType: "Ectomorph", weeklyDays: "6 days", status: "Blocked", joinDate: "2025-12-03" },
 ];
 
-const DEFAULT_ROWS_PER_PAGE = 6;
+// const DEFAULT_ROWS_PER_PAGE = 6;
 
 export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'active' | 'blocked'
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [users, setUsers] = useState([]);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
   const [viewTarget, setViewTarget] = useState(null);
   const [blockTarget, setBlockTarget] = useState(null);
 
@@ -50,26 +55,19 @@ export default function UserManagementPage() {
     setBlockTarget(user || null);
   };
 
-  const filteredUsers = useMemo(() => {
-    let list = users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    if (statusFilter === "active") list = list.filter((u) => u.status === "Active");
-    if (statusFilter === "blocked") list = list.filter((u) => u.status === "Blocked");
-    return list;
-  }, [searchTerm, statusFilter, users]);
-
-  const totalUsers = filteredUsers.length;
   const activeCount = users.filter((u) => u.status === "Active").length;
   const blockedCount = users.filter((u) => u.status === "Blocked").length;
 
-  const totalPages = Math.max(1, Math.ceil(totalUsers / rowsPerPage));
+  const totalPages = Math.max(1, serverTotalPages || 1);
   const start = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = filteredUsers.slice(start, start + rowsPerPage);
+  const paginatedUsers = users;
 
   const goToPage = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearchTerm(searchTerm), 350);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -83,6 +81,79 @@ export default function UserManagementPage() {
     return [1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages];
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      setIsFetchingUsers(true);
+      try {
+        const params = {
+          page: currentPage,
+          limit: rowsPerPage,
+        };
+
+        const trimmedSearch = debouncedSearchTerm.trim();
+        if (trimmedSearch) params.search = trimmedSearch;
+
+        if (statusFilter === "active") params.status = "Active";
+        if (statusFilter === "blocked") params.status = "Blocked";
+
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-users`, {
+          headers: { token },
+          params,
+        });
+
+        const rawUsers = res?.data?.result?.users ?? [];
+        const serverTotal = res?.data?.result?.total ?? 0;
+        const serverPages = res?.data?.result?.totalPages ?? 1;
+
+        // Map backend user shape into the fields expected by this UI.
+        const mappedUsers = rawUsers.map((u) => {
+          const joinDate = u?.createdAt
+            ? new Date(u.createdAt).toISOString().slice(0, 10)
+            : "";
+
+          return {
+            id: u?._id ?? u?.id,
+            name: u?.name ?? "",
+            email: u?.email ?? "",
+            goal: u?.fitnessTarget ?? u?.goalDuration ?? "",
+            bodyType: u?.workoutPreferences ?? u?.workoutSkillLevel ?? u?.gender ?? "",
+            weeklyDays:
+              typeof u?.workoutFrequency === "number"
+                ? `${u.workoutFrequency} days`
+                : u?.workoutFrequency
+                  ? `${u.workoutFrequency} days`
+                  : "",
+            status: u?.status ?? "Active",
+            joinDate,
+          };
+        });
+
+        setUsers(mappedUsers);
+        setTotalUsers(serverTotal);
+        setServerTotalPages(serverPages);
+      } catch (err) {
+        console.error("Fetch users failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to fetch users");
+      } finally {
+        setIsFetchingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [currentPage, rowsPerPage, statusFilter, debouncedSearchTerm]);
+
   return (
     <div className="min-h-[80vh] py-8 px-1">
       {/* Heading */}
@@ -90,7 +161,7 @@ export default function UserManagementPage() {
 
       {/* Summary: Total | Active | Blocked */}
       <p className="mt-1 text-sm text-[#2158A3]">
-        <span>Total: {users.length}</span>
+        <span>Total: {totalUsers}</span>
         <span className="mx-2">|</span>
         <span className="text-green-600 font-normal">Active: {activeCount}</span>
         <span className="mx-2">|</span>
@@ -114,7 +185,7 @@ export default function UserManagementPage() {
         {/* Filter tabs: All Users | Active | Blocked */}
         <div className="mt-4 flex gap-2">
           {[
-              { key: "all", label: `All Users (${users.length})` },
+              { key: "all", label: `All Users (${totalUsers})` },
             { key: "active", label: `Active (${activeCount})` },
             { key: "blocked", label: `Blocked (${blockedCount})` },
           ].map(({ key, label }) => (
@@ -153,7 +224,13 @@ export default function UserManagementPage() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white">
-            {paginatedUsers.length > 0 ? (
+            {isFetchingUsers ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                  Loading users...
+                </TableCell>
+              </TableRow>
+            ) : paginatedUsers.length > 0 ? (
               paginatedUsers.map((user, idx) => (
                 <TableRow
                   key={user.id}
@@ -225,7 +302,7 @@ export default function UserManagementPage() {
                 setCurrentPage(1);
               }}
             >
-              {[6, 10, 25, 50].map((n) => (
+              {[10, 25, 50].map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>

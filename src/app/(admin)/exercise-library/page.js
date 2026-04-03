@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { toast } from "react-hot-toast";
 import {
   Table,
@@ -15,20 +16,24 @@ import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
 import { MdDeleteOutline } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import { MOCK_EXERCISES } from "./data";
 
 import DeleteExerciseModal from "./components/DeleteExerciseModal";
 import ViewExerciseModal from "./components/ViewExerciseModal";
 
-const DEFAULT_ROWS_PER_PAGE = 6;
+// const DEFAULT_ROWS_PER_PAGE = 6;
 
 export default function ExerciseLibrary() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("all"); // 'all' | 'beginner' | 'intermediate' | 'advanced'
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [exercises, setExercises] = useState(MOCK_EXERCISES);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [exercises, setExercises] = useState([]);
+  const [isFetchingExercises, setIsFetchingExercises] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [totalExercises, setTotalExercises] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
 
@@ -38,6 +43,10 @@ export default function ExerciseLibrary() {
   };
 
   const handleEdit = (id) => {
+    const exercise = exercises.find((e) => e.id === id);
+    if (exercise) {
+      sessionStorage.setItem(`exercise-edit:${id}`, JSON.stringify(exercise));
+    }
     router.push(`/exercise-library/${id}/edit`);
   };
 
@@ -46,34 +55,15 @@ export default function ExerciseLibrary() {
     setDeleteTarget(exercise || null);
   };
 
-  const filteredExercises = useMemo(() => {
-    let list = exercises.filter((e) => {
-      const q = searchTerm.toLowerCase();
-      return (
-        e.title.toLowerCase().includes(q) ||
-        e.category.toLowerCase().includes(q) ||
-        e.difficulty.toLowerCase().includes(q) ||
-        e.mediaType.toLowerCase().includes(q)
-      );
-    });
-
-    if (difficultyFilter === "beginner") list = list.filter((e) => e.difficulty === "Beginner");
-    if (difficultyFilter === "intermediate")
-      list = list.filter((e) => e.difficulty === "Intermediate");
-    if (difficultyFilter === "advanced") list = list.filter((e) => e.difficulty === "Advanced");
-    return list;
-  }, [searchTerm, difficultyFilter, exercises]);
-
-  const totalExercises = filteredExercises.length;
   const activeCount = exercises.filter((e) => e.status === "Active").length;
   const inactiveCount = exercises.filter((e) => e.status === "Inactive").length;
   const beginnerCount = exercises.filter((e) => e.difficulty === "Beginner").length;
   const intermediateCount = exercises.filter((e) => e.difficulty === "Intermediate").length;
   const advancedCount = exercises.filter((e) => e.difficulty === "Advanced").length;
 
-  const totalPages = Math.max(1, Math.ceil(totalExercises / rowsPerPage));
   const start = (currentPage - 1) * rowsPerPage;
-  const paginatedExercises = filteredExercises.slice(start, start + rowsPerPage);
+  const totalPages = Math.max(1, serverTotalPages || 1);
+  const paginatedExercises = exercises; // already server-paginated
 
   const goToPage = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
 
@@ -89,6 +79,82 @@ export default function ExerciseLibrary() {
     return [1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages];
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearchTerm(searchTerm), 350);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const fetchExercises = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      setIsFetchingExercises(true);
+      try {
+        const params = {
+          page: currentPage,
+          limit: rowsPerPage,
+        };
+
+        const trimmedSearch = debouncedSearchTerm.trim();
+        if (trimmedSearch) params.search = trimmedSearch;
+
+        if (difficultyFilter !== "all") {
+          const difficultyMap = {
+            beginner: "Beginner",
+            intermediate: "Intermediate",
+            advanced: "Advanced",
+          };
+          params.difficultyLevel = difficultyMap[difficultyFilter] ?? difficultyFilter;
+        }
+
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-exercises`, {
+          headers: { token },
+          params,
+        });
+
+        const result = res?.data?.result ?? {};
+        const raw = result.exercises ?? [];
+        setTotalExercises(result.total ?? 0);
+        setServerTotalPages(result.totalPages ?? 1);
+
+        const mapped = raw.map((ex) => {
+          const createdAt = ex?.createdAt
+            ? new Date(ex.createdAt).toISOString().slice(0, 10)
+            : "";
+
+          return {
+            id: ex?._id ?? ex?.id,
+            title: ex?.title ?? "",
+            category: ex?.category ?? "",
+            difficulty: ex?.difficultyLevel ?? ex?.difficulty ?? "",
+            mediaType: ex?.mediaType ?? "",
+            status: ex?.status ?? "Active",
+            createdAt,
+          };
+        });
+
+        setExercises(mapped);
+      } catch (err) {
+        console.error("Fetch exercises failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to fetch exercises");
+      } finally {
+        setIsFetchingExercises(false);
+      }
+    };
+
+    fetchExercises();
+  }, [currentPage, rowsPerPage, difficultyFilter, debouncedSearchTerm, refreshKey]);
+
   return (
     <div className="min-h-[80vh] py-8 px-1">
       <div className="flex items-center justify-between">
@@ -98,7 +164,7 @@ export default function ExerciseLibrary() {
           </h1>
 
           <p className="mt-1 text-sm text-[#2158A3]">
-            <span>Total: {exercises.length}</span>
+            <span>Total: {totalExercises}</span>
             <span className="mx-2">|</span>
             <span className="text-green-600 font-normal">Active: {activeCount}</span>
             <span className="mx-2">|</span>
@@ -128,7 +194,7 @@ export default function ExerciseLibrary() {
 
         <div className="mt-4 flex gap-2">
           {[
-            { key: "all", label: `All (${exercises.length})` },
+            { key: "all", label: `All (${totalExercises})` },
             { key: "beginner", label: `Beginner (${beginnerCount})` },
             { key: "intermediate", label: `Intermediate (${intermediateCount})` },
             { key: "advanced", label: `Advanced (${advancedCount})` },
@@ -170,7 +236,13 @@ export default function ExerciseLibrary() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white">
-            {paginatedExercises.length > 0 ? (
+            {isFetchingExercises ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-gray-500 py-8">
+                  Loading exercises...
+                </TableCell>
+              </TableRow>
+            ) : paginatedExercises.length > 0 ? (
               paginatedExercises.map((ex, idx) => (
                 <TableRow key={ex.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
                   <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
@@ -263,7 +335,7 @@ export default function ExerciseLibrary() {
                 setCurrentPage(1);
               }}
             >
-              {[6, 10, 25, 50].map((n) => (
+              {[ 10, 25, 50].map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
@@ -336,14 +408,35 @@ export default function ExerciseLibrary() {
         open={!!deleteTarget}
         exercise={deleteTarget}
         onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!deleteTarget) return;
           const exerciseTitle = deleteTarget.title;
-          setExercises((prev) =>
-            prev.filter((e) => e.id !== deleteTarget.id)
-          );
-          setDeleteTarget(null);
-          toast.success(`Exercise ${exerciseTitle} deleted successfully!`);
+          const exerciseId = deleteTarget.id;
+          const token = localStorage.getItem("token");
+          const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+          if (!baseUrl) {
+            toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+            return;
+          }
+          if (!token) {
+            toast.error("Session expired. Please login again.");
+            return;
+          }
+
+          try {
+            await axios.post(
+              `${baseUrl}/api/admin/delete-exercises/${exerciseId}`,
+              {},
+              { headers: { token } }
+            );
+            setDeleteTarget(null);
+            toast.success(`Exercise ${exerciseTitle} deleted successfully!`);
+            setRefreshKey((k) => k + 1);
+          } catch (err) {
+            console.error("Delete exercise failed:", err?.response?.data || err?.message);
+            toast.error(err?.response?.data?.message || "Failed to delete exercise");
+          }
         }}
       />
 

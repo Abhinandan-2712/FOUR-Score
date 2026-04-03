@@ -1,7 +1,7 @@
 "use client";
 
 import {  FaRegFileAlt,FaRegHeart, FaSignOutAlt } from "react-icons/fa";
-import { MdDashboard } from "react-icons/md";
+import { MdDashboard, MdFitnessCenter } from "react-icons/md";
 import { TbActivityHeartbeat } from "react-icons/tb";
 import { LiaDumbbellSolid } from "react-icons/lia";
 import { LuUsers, LuApple } from "react-icons/lu";      
@@ -22,6 +22,11 @@ export default function Sidebar() {
       label: "Exercise Library",
       icon: LiaDumbbellSolid,
     },
+    {
+      href: "/fitness-programs",
+      label: "Fitness Programs",
+      icon: MdFitnessCenter,
+    },
     { 
       href: "/nutrition-macros", 
       label: "Nutrition & Macros", 
@@ -37,11 +42,11 @@ export default function Sidebar() {
       label: "Notifications",
       icon: BiBell,
     },
-    // {
-    //   href: "/faq",
-    //   label: "FAQ",
-    //   icon: BiComment,
-    // },
+    {
+      href: "/faq",
+      label: "FAQ",
+      icon: BiComment,
+    },
     // { 
     //   href: "/unity-community", 
     //   label: "Unity (Community)", 
@@ -65,9 +70,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="min-h-screen h-full w-64 bg-[#0A3161] text-white flex flex-col shadow-lg">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#0A3161] text-white shadow-lg">
       {/* Logo */}
-      <div className=" flex p-4 text-center border-b border-[#0D3D7A]">
+      <div className="flex shrink-0 p-4 text-center border-b border-[#0D3D7A]">
         <Image
           src="/logo.jpg" // ✅ absolute path from the public folder
           alt="Medi Admin Logo"
@@ -81,8 +86,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      {/* Navigation — scrolls when links overflow viewport */}
+      <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 space-y-2 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.35)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/30 hover:[&::-webkit-scrollbar-thumb]:bg-white/45">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href; // ✅ check active route
           return (
@@ -103,7 +108,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-[#0D3D7A]">
+      <div className="shrink-0 p-4 border-t border-[#0D3D7A]">
         <button className="flex items-center gap-3 p-3 w-full rounded-full hover:bg-[#0D3D7A] transition">
           <FaSignOutAlt className="w-5 h-5" />
           <span>Logout</span>

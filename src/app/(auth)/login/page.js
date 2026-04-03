@@ -33,7 +33,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admins/login`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/login`,
         { email, password }
       );
       if (res?.data?.success) {
@@ -42,7 +42,7 @@ export default function LoginPage() {
           // Optional: use a longer-lived storage if you implement it
         }
         toast.success("Login successful!");
-        // router.replace("/dashboard");
+        router.replace("/dashboard");
       } else if (!res?.data?.success && res.data.message === "Password mismatch") {
         toast.error("Password mismatch");
       }

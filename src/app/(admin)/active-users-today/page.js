@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   Table,
   TableBody,
@@ -11,16 +12,33 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { FaRegEye } from "react-icons/fa";
-import { MOCK_ACTIVE_USERS_TODAY } from "./data";
 import ViewActiveUserModal from "./components/ViewActiveUserModal";
+import { toast } from "react-hot-toast";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
+
+function mapApiUserToRow(u) {
+  const lastActive =
+    u?.lastWorkout ??
+    (u?.updatedAt ? new Date(u.updatedAt).toLocaleString("en-IN") : "") ??
+    "";
+
+  return {
+    id: u?._id ?? u?.id,
+    name: u?.name ?? "",
+    email: u?.email ?? "",
+    goal: u?.fitnessTarget ?? u?.goalDuration ?? "",
+    lastActiveAt: lastActive || "-",
+    sessionsToday: typeof u?.sessionsToday === "number" ? u.sessionsToday : "-",
+  };
+}
 
 export default function ActiveUsersToday() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [activeUsers, setActiveUsers] = useState(MOCK_ACTIVE_USERS_TODAY);
+  const [activeUsers, setActiveUsers] = useState([]);
+  const [isFetching, setIsFetching] = useState(false);
   const [viewTarget, setViewTarget] = useState(null);
 
   const handleView = (id) => {
@@ -60,6 +78,40 @@ export default function ActiveUsersToday() {
   const todayFormatted = useMemo(() => {
     const d = new Date();
     return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }, []);
+
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      setIsFetching(true);
+      try {
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-active-users`, {
+          headers: { token },
+        });
+
+        const raw = res?.data?.result;
+        const list = Array.isArray(raw) ? raw : [];
+        setActiveUsers(list.map(mapApiUserToRow));
+      } catch (err) {
+        console.error("Fetch active users failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to fetch active users");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchActiveUsers();
   }, []);
 
   return (
@@ -102,7 +154,13 @@ export default function ActiveUsersToday() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white">
-            {paginatedUsers.length > 0 ? (
+            {isFetching ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                  Loading active users...
+                </TableCell>
+              </TableRow>
+            ) : paginatedUsers.length > 0 ? (
               paginatedUsers.map((user, idx) => (
                 <TableRow key={user.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
                   <TableCell className="px-4 py-3 font-medium text-[#0A3161]">{user.name}</TableCell>

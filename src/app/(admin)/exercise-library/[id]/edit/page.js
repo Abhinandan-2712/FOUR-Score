@@ -2,17 +2,17 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft, HiOutlineUpload } from "react-icons/hi";
 import { LiaDnaSolid } from "react-icons/lia";
-import { MOCK_EXERCISES } from "../../data";
 import { toast } from "react-hot-toast";
 
 export default function EditExercisePage() {
   const router = useRouter();
   const params = useParams();
-  const exerciseId = parseInt(params.id);
+  const exerciseId = params.id;
   
   const [exercise, setExercise] = useState(null);
   const [title, setTitle] = useState("");
@@ -25,15 +25,16 @@ export default function EditExercisePage() {
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaError, setMediaError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
   const difficultyOptions = ["Beginner", "Intermediate", "Advanced"];
   const mediaOptions = ["Video", "Image", "GIF"];
 
   useEffect(() => {
-    // Find exercise by ID
-    const foundExercise = MOCK_EXERCISES.find((e) => e.id === exerciseId);
-    if (foundExercise) {
+    const raw = sessionStorage.getItem(`exercise-edit:${exerciseId}`);
+    const foundExercise = raw ? JSON.parse(raw) : null;
+    if (foundExercise && String(foundExercise.id) === String(exerciseId)) {
       setExercise(foundExercise);
       setTitle(foundExercise.title || "");
       setCategory(foundExercise.category || "");
@@ -77,16 +78,55 @@ export default function EditExercisePage() {
     setMediaFile(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title || !category) {
       toast.error("Please fill in all required fields");
       return;
     }
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
-    // Here you would typically make an API call to update the exercise
-    // For now, we'll just show a success message
-    toast.success(`Exercise "${title}" updated successfully!`);
-    router.push("/exercise-library");
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("category", category.trim());
+      formData.append("difficultyLevel", difficulty);
+      formData.append("mediaType", mediaType);
+      formData.append("instructions", instructions.trim() || "none");
+      formData.append("alternateExercise", alternateExercise.trim());
+      if (mediaFile) {
+        formData.append("media", mediaFile);
+      }
+
+      const res = await axios.post(
+        `${baseUrl}/api/admin/update-exercises/${exerciseId}`,
+        formData,
+        { headers: { token } }
+      );
+
+      if (res?.data?.success) {
+        sessionStorage.removeItem(`exercise-edit:${exerciseId}`);
+        toast.success(`Exercise "${title}" updated successfully!`);
+        router.push("/exercise-library");
+      } else {
+        toast.error(res?.data?.message || "Failed to update exercise");
+      }
+    } catch (err) {
+      console.error("Update exercise failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to update exercise");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!exercise) {
@@ -319,8 +359,10 @@ export default function EditExercisePage() {
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
             onClick={handleSave}
+            disabled={isSubmitting}
+            aria-disabled={isSubmitting}
           >
-            Update Exercise
+            {isSubmitting ? "Updating..." : "Update Exercise"}
           </Button>
         </div>
       </div>
