@@ -1,13 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { FaSave } from "react-icons/fa";
 import { MOCK_CONTENT_ITEMS } from "./data";
-import { CKEditor } from "@ckeditor/ckeditor5-react";
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 import axios from "axios";
+
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[360px] p-4 text-sm text-[#2158A3]">Loading editor…</div>
+  ),
+});
 import {
   Table,
   TableBody,
@@ -773,11 +779,10 @@ export default function ContentManagement() {
               {isLoading ? (
                 <div className="min-h-[360px] p-4 text-sm text-[#2158A3]">Loading...</div>
               ) : (
-                <CKEditor
+                <RichTextEditor
                   key={activeTab}
-                  editor={ClassicEditor}
                   data={editorData}
-                  onChange={(event, editor) => setEditorData(editor.getData())}
+                  onChange={setEditorData}
                   config={{
                     placeholder: `Enter ${currentTabMeta.title.toLowerCase()}...`,
                     toolbar: [
