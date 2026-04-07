@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getProgramDetail, MOCK_FITNESS_PROGRAMS, hasProgramEditor, FOUNDATIONS_PROGRAM_ID } from "../data";
+import {
+  getProgramDetail,
+  MOCK_FITNESS_PROGRAMS,
+  FOUNDATIONS_PROGRAM_ID,
+  createEmptyProgramDetailForId,
+} from "../data";
+import {
+  apiRowToEditorDraft,
+  mapProgramFromApi,
+  programCacheKey,
+  programEditKey,
+  fetchProgramRawById,
+  coerceMultilineText,
+} from "@/lib/fitnessProgramApi";
 
 function BulletBlock({ title, text }) {
-  if (!text?.trim()) return null;
-  const lines = text.split(/\n/).filter(Boolean);
+  const body = coerceMultilineText(text);
+  if (!body.trim()) return null;
+  const lines = body.split(/\n/).filter(Boolean);
   return (
     <div>
       <h2 className="text-sm font-semibold text-[#0A3161] mb-2">{title}</h2>
@@ -38,13 +52,63 @@ export default function ViewFitnessProgramPage() {
   const id = params?.id;
 
   const [loaded, setLoaded] = useState(false);
-
-  const summary = useMemo(() => MOCK_FITNESS_PROGRAMS.find((p) => p.id === id) ?? null, [id]);
-  const detail = useMemo(() => getProgramDetail(id), [id]);
-  const canEdit = hasProgramEditor(id);
+  const [summary, setSummary] = useState(null);
+  const [detail, setDetail] = useState(null);
 
   useEffect(() => {
-    setLoaded(true);
+    if (!id) {
+      setSummary(null);
+      setDetail(null);
+      setLoaded(true);
+      return;
+    }
+
+    let cancelled = false;
+    setLoaded(false);
+
+    const finish = (s, d) => {
+      if (cancelled) return;
+      setSummary(s);
+      setDetail(d);
+      setLoaded(true);
+    };
+
+    try {
+      const cached = sessionStorage.getItem(programCacheKey(id));
+      if (cached) {
+        const raw = JSON.parse(cached);
+        const empty = createEmptyProgramDetailForId(id);
+        const d = apiRowToEditorDraft(raw, empty);
+        const s = mapProgramFromApi(raw);
+        finish(s, d);
+        return () => {
+          cancelled = true;
+        };
+      }
+    } catch {
+      /* ignore */
+    }
+
+    (async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+      if (baseUrl && token) {
+        const found = await fetchProgramRawById(id, { token, baseUrl });
+        if (found) {
+          const empty = createEmptyProgramDetailForId(id);
+          finish(mapProgramFromApi(found), apiRowToEditorDraft(found, empty));
+          return;
+        }
+      }
+
+      const mockSummary = MOCK_FITNESS_PROGRAMS.find((p) => p.id === id) ?? null;
+      const mockDetail = getProgramDetail(id);
+      finish(mockSummary, mockDetail);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const title = detail?.title ?? summary?.title ?? "Program";
@@ -61,7 +125,7 @@ export default function ViewFitnessProgramPage() {
     );
   }
 
-  if (!summary && !detail) {
+  if (!summary && !detail && loaded) {
     return (
       <div className="min-h-[50vh] py-16 px-4 text-center max-w-lg mx-auto">
         <div className="rounded-2xl border border-[#C8D7E9] bg-white p-8 shadow-sm">
@@ -76,7 +140,7 @@ export default function ViewFitnessProgramPage() {
   }
 
   return (
-    <div className="min-h-[80vh] py-8 px-1 max-w-6xl mx-auto">
+    <div className="min-h-[80vh] py-8 px-1 mx-auto">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4 min-w-0">
           <button
@@ -101,18 +165,28 @@ export default function ViewFitnessProgramPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <span className="inline-flex rounded-full border border-[#C8D7E9] bg-[#F2F5FA] px-3 py-1 text-xs font-medium text-[#0A3161]">
+          {/* <span className="inline-flex rounded-full border border-[#C8D7E9] bg-[#F2F5FA] px-3 py-1 text-xs font-medium text-[#0A3161]">
             Admin panel only — not the member app
-          </span>
-          {canEdit ? (
-            <Button variant="outline" className="border-[#C8D7E9] bg-white" asChild>
-              <Link href={`/fitness-programs/${id}/edit`}>Edit program</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" className="border-[#C8D7E9] bg-white opacity-60 cursor-not-allowed" disabled title="Full editor is available for 28-Day Full Body Foundations in this UI preview">
-              Edit (not configured)
-            </Button>
-          )}
+          </span> */}
+          <Button
+            variant="outline"
+            className="border-[#C8D7E9] bg-white"
+            type="button"
+            onClick={() => {
+              try {
+                const c = sessionStorage.getItem(programCacheKey(id));
+                if (c) sessionStorage.setItem(programEditKey(id), c);
+                else if (summary?._raw) {
+                  sessionStorage.setItem(programEditKey(id), JSON.stringify(summary._raw));
+                }
+              } catch {
+                /* ignore */
+              }
+              router.push(`/fitness-programs/${id}/edit`);
+            }}
+          >
+            Edit program
+          </Button>
         </div>
       </div>
 
@@ -122,9 +196,9 @@ export default function ViewFitnessProgramPage() {
           <p className="mt-1 text-amber-950/85">
             Full schedule / workout / recovery content for this title lives in the master PDF. In this admin preview,
             only <strong>28-Day Full Body Foundations</strong> has a complete editable payload. Use{" "}
-            <Link href="/fitness-programs/reference" className="underline font-medium">
+            {/* <Link href="/fitness-programs/reference" className="underline font-medium">
               PDF: Logic &amp; catalog
-            </Link>{" "}
+            </Link>{" "} */}
             for the full thirteen-program spec.
           </p>
         </div>

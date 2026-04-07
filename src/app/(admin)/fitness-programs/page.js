@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   Table,
   TableBody,
@@ -16,7 +17,16 @@ import { Button } from "@/components/ui/button";
 import { FaRegEdit } from "react-icons/fa";
 import { HiOutlineEye, HiOutlineTrash } from "react-icons/hi";
 import { toast } from "react-hot-toast";
-import { MOCK_FITNESS_PROGRAMS, hasProgramEditor } from "./data";
+import {
+  mapProgramFromApi,
+  programCacheKey,
+  programEditKey,
+  extractProgramsFromListResponse,
+  extractListMeta,
+  deleteProgramById,
+  isAdminApiErrorPayload,
+} from "@/lib/fitnessProgramApi";
+import DeleteProgramModal from "./components/DeleteProgramModal";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -25,23 +35,83 @@ export default function FitnessProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [programs, setPrograms] = useState(() => [...MOCK_FITNESS_PROGRAMS]);
+  const [programs, setPrograms] = useState([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return programs;
-    return programs.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.level.toLowerCase().includes(q) ||
-        (p.subHeader && p.subHeader.toLowerCase().includes(q))
-    );
-  }, [searchTerm, programs]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearchTerm(searchTerm), 350);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
 
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  useEffect(() => {
+    const load = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      setIsFetching(true);
+      try {
+        const params = {
+          page: currentPage,
+          limit: rowsPerPage,
+        };
+        const q = debouncedSearchTerm.trim();
+        if (q) params.search = q;
+
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-programs`, {
+          headers: { token, Authorization: `Bearer ${token}` },
+          params,
+        });
+
+        const payload = res?.data ?? {};
+        if (isAdminApiErrorPayload(payload)) {
+          toast.error(payload.message || "Failed to fetch programs");
+          setPrograms([]);
+          return;
+        }
+
+        const rawList = extractProgramsFromListResponse(res?.data);
+        const meta = extractListMeta(res?.data);
+
+        const mapped = rawList.map(mapProgramFromApi).filter(Boolean);
+
+        if (meta.total !== undefined) setServerTotal(meta.total);
+        else setServerTotal(mapped.length);
+
+        if (meta.totalPages !== undefined) setServerTotalPages(Math.max(1, meta.totalPages));
+        else setServerTotalPages(1);
+
+        setPrograms(mapped);
+      } catch (err) {
+        console.error("Fetch programs failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to fetch programs");
+        setPrograms([]);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    load();
+  }, [currentPage, rowsPerPage, debouncedSearchTerm, refreshKey]);
+
+  const totalItems = serverTotal || programs.length;
+  const totalPages = Math.max(1, serverTotalPages || 1);
   const start = (currentPage - 1) * rowsPerPage;
-  const pageRows = filtered.slice(start, start + rowsPerPage);
+  const pageRows = programs;
 
   const goToPage = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
 
@@ -49,12 +119,61 @@ export default function FitnessProgramsPage() {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  const handleDelete = (p) => {
-    const ok = window.confirm(`Delete “${p.title}”? This is UI-only — no API call.`);
-    if (!ok) return;
-    setPrograms((prev) => prev.filter((x) => x.id !== p.id));
-    toast.success("Program removed from list (preview only).");
-    setCurrentPage(1);
+  const confirmDeleteProgram = async () => {
+    const p = deleteTarget;
+    if (!p) return;
+
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const res = await deleteProgramById(p.id, { token, baseUrl });
+      const data = res?.data ?? {};
+      if (isAdminApiErrorPayload(data)) {
+        toast.error(data.message || data.msg || "Failed to delete program");
+        return;
+      }
+      try {
+        sessionStorage.removeItem(programCacheKey(p.id));
+        sessionStorage.removeItem(programEditKey(p.id));
+      } catch {
+        /* ignore */
+      }
+      toast.success("Program deleted.");
+      setDeleteTarget(null);
+      setRefreshKey((k) => k + 1);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error("Delete program failed:", err?.response?.data || err?.message);
+      const msg =
+        err?.adminPayload?.message ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to delete program";
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const stashProgramForRoute = (p) => {
+    try {
+      if (p?._raw) {
+        sessionStorage.setItem(programCacheKey(p.id), JSON.stringify(p._raw));
+        sessionStorage.setItem(programEditKey(p.id), JSON.stringify(p._raw));
+      }
+    } catch (e) {
+      console.warn("sessionStorage program cache failed", e);
+    }
   };
 
   const paginationItems = useMemo(() => {
@@ -73,19 +192,19 @@ export default function FitnessProgramsPage() {
             Fitness Programs
           </h1>
           <p className="mt-1 text-sm text-[#2158A3]">
-            Thirteen programs (PDF catalog) — full tabbed editor for <strong>28-Day Foundations</strong> only in this
-            admin preview. <span className="text-[#5671A6]">Not the member app.</span>
+            Manage programs from the API. Reference PDF:{" "}
+            <span className="text-[#5671A6]">not the member app preview.</span>
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0 w-full sm:w-auto">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             className="border-[#C8D7E9] bg-white text-[#0A3161] w-full sm:w-auto"
             asChild
           >
             <Link href="/fitness-programs/reference">PDF: Logic &amp; catalog</Link>
-          </Button>
+          </Button> */}
           <Button
             type="button"
             className="bg-[#0A3161] hover:bg-[#0D3D7A] w-full sm:w-auto"
@@ -162,7 +281,10 @@ export default function FitnessProgramsPage() {
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => router.push(`/fitness-programs/${p.id}`)}
+                        onClick={() => {
+                          stashProgramForRoute(p);
+                          router.push(`/fitness-programs/${p.id}`);
+                        }}
                         className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                         aria-label="View program"
                         title="View"
@@ -171,25 +293,19 @@ export default function FitnessProgramsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => hasProgramEditor(p.id) && router.push(`/fitness-programs/${p.id}/edit`)}
-                        disabled={!hasProgramEditor(p.id)}
-                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                          hasProgramEditor(p.id)
-                            ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        }`}
-                        aria-label={hasProgramEditor(p.id) ? "Edit program" : "Edit not available for this catalog row"}
-                        title={
-                          hasProgramEditor(p.id)
-                            ? "Edit"
-                            : "Full editor: 28-Day Foundations only (UI preview)"
-                        }
+                        onClick={() => {
+                          stashProgramForRoute(p);
+                          router.push(`/fitness-programs/${p.id}/edit`);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        aria-label="Edit program"
+                        title="Edit"
                       >
                         <FaRegEdit className="h-4 w-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(p)}
+                        onClick={() => setDeleteTarget(p)}
                         className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         aria-label="Delete program"
                         title="Delete"
@@ -203,9 +319,11 @@ export default function FitnessProgramsPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-gray-500 py-10">
-                  {programs.length === 0
-                    ? "No programs in the list. Add one with + Add Program."
-                    : "No programs match your search."}
+                  {isFetching
+                    ? "Loading programs…"
+                    : programs.length === 0
+                      ? "No programs yet. Add one with + Add Program."
+                      : "No programs on this page."}
                 </TableCell>
               </TableRow>
             )}
@@ -287,6 +405,16 @@ export default function FitnessProgramsPage() {
           </button>
         </div>
       </div>
+
+      <DeleteProgramModal
+        open={!!deleteTarget}
+        program={deleteTarget}
+        isDeleting={isDeleting}
+        onCancel={() => {
+          if (!isDeleting) setDeleteTarget(null);
+        }}
+        onConfirm={confirmDeleteProgram}
+      />
     </div>
   );
 }

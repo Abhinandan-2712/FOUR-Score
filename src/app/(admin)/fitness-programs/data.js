@@ -193,3 +193,39 @@ export function getProgramDetail(id) {
   if (!id) return null;
   return MOCK_PROGRAM_DETAIL[id] ?? null;
 }
+
+/** Full editor shape for API-backed programs (no PDF mock row). */
+export function createEmptyProgramDetailForId(id) {
+  const src = MOCK_PROGRAM_DETAIL[FOUNDATIONS_PROGRAM_ID];
+  if (!src) return null;
+  const d = JSON.parse(JSON.stringify(src));
+  d.id = id;
+  d.title = "";
+  d.subHeader = "";
+  d.overview = "";
+  d.whatsInside = "";
+  d.isThisForYou = "";
+  d.theGoal = "";
+  d.frequencyCaption = "";
+  d.locationTag = "";
+  d.equipment = "";
+  d.equipmentNote = "";
+  d.implementationNote = "";
+  d.status = "Active";
+  d.schedule.forEach((row) => {
+    ["mon", "tue", "wed", "thu", "fri", "weekend"].forEach((k) => {
+      row[k] = "";
+    });
+  });
+  ["A", "B", "C"].forEach((letter) => {
+    d.workouts[letter].forEach((ex) => {
+      ex.name = "";
+      ex.tag = "Large Muscle";
+    });
+  });
+  d.recovery.lissMinutes = 20;
+  d.recovery.lissPrompt = "";
+  d.recovery.lissOptions = "";
+  d.recovery.stretches = [{ name: "", detail: "" }];
+  return d;
+}
