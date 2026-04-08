@@ -63,11 +63,11 @@ export default function Sidebar() {
       label: "Content Management", 
       icon: FaRegFileAlt 
     },
-    {
-      href: "/wireframe",
-      label: "Wireframe",
-      icon: PiLayoutLight,
-    },
+    // {
+    //   href: "/wireframe",
+    //   label: "Wireframe",
+    //   icon: PiLayoutLight,
+    // },
     {
       href: "/settings",
       label: "Settings",
