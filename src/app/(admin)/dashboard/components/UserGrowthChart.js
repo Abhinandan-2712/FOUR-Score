@@ -1,12 +1,19 @@
 "use client";
 import { Line } from "react-chartjs-2";
 
-export default function UserGrowthChart({ data, baseOptions }) {
+export default function UserGrowthChart({
+  data,
+  baseOptions,
+  title = "New Users",
+  subtitle = "Monthly new user registrations",
+  yMax = 1000,
+  yStep = 250,
+}) {
   return (
     <div className="bg-white p-6 rounded-2xl border border-[#C8D7E9] shadow-md h-72 md:h-96 flex flex-col">
       <div className="mb-4 flex-shrink-0">
-        <h3 className="text-base font-semibold text-[#0A3161]">User Growth</h3>
-        <p className="text-xs text-[#2158A3] mt-1">Monthly new user registrations</p>
+        <h3 className="text-base font-semibold text-[#0A3161]">{title}</h3>
+        <p className="text-xs text-[#2158A3] mt-1">{subtitle}</p>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <Line
@@ -36,9 +43,9 @@ export default function UserGrowthChart({ data, baseOptions }) {
             y: {
               ...baseOptions.scales.y,
               beginAtZero: true,
-              max: 1000,
+              max: yMax,
               ticks: {
-                stepSize: 250,
+                stepSize: yStep,
                 color: "#4b5563",
                 maxTicksLimit: 5,
               },

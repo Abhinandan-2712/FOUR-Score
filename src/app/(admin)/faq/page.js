@@ -15,9 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
 import { MdDeleteOutline } from "react-icons/md";
-import { MOCK_FAQS } from "./data";
 import DeleteFaqModal from "./components/DeleteFaqModal";
 import ViewFaqModal from "./components/ViewFaqModal";
+import { fetchAllFaqs, deleteFaqById } from "@/lib/faqApi";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -27,9 +27,41 @@ export default function FaqPage() {
   const [statusFilter, setStatusFilter] = useState("all"); // all | active | inactive
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
-  const [faqs, setFaqs] = useState(MOCK_FAQS);
+  const [faqs, setFaqs] = useState([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeletingFaq, setIsDeletingFaq] = useState(false);
   const [viewTarget, setViewTarget] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        setIsFetching(false);
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        setIsFetching(false);
+        return;
+      }
+      setIsFetching(true);
+      try {
+        const list = await fetchAllFaqs({ token, baseUrl });
+        setFaqs(list);
+      } catch (err) {
+        console.error("Load FAQs failed:", err?.adminPayload || err?.message);
+        toast.error(err?.adminPayload?.message || err?.message || "Failed to load FAQs");
+        setFaqs([]);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    load();
+  }, [refreshKey]);
 
   const filteredFaqs = useMemo(() => {
     const q = searchTerm.toLowerCase();
@@ -65,6 +97,33 @@ export default function FaqPage() {
       return [1, "…", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     return [1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages];
   }, [currentPage, totalPages]);
+
+  const confirmDeleteFaq = async () => {
+    if (!deleteTarget) return;
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+    const q = deleteTarget.question;
+    setIsDeletingFaq(true);
+    try {
+      await deleteFaqById(deleteTarget.id, { token, baseUrl });
+      toast.success(`FAQ "${q}" deleted.`);
+      setDeleteTarget(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Delete FAQ failed:", err?.adminPayload || err?.message);
+      toast.error(err?.adminPayload?.message || err?.message || "Failed to delete FAQ");
+    } finally {
+      setIsDeletingFaq(false);
+    }
+  };
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
@@ -105,6 +164,7 @@ export default function FaqPage() {
           ].map(({ key, label }) => (
             <button
               key={key}
+              type="button"
               onClick={() => {
                 setStatusFilter(key);
                 setCurrentPage(1);
@@ -133,7 +193,13 @@ export default function FaqPage() {
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white">
-            {paginatedFaqs.length > 0 ? (
+            {isFetching ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-[#5671A6] py-10">
+                  Loading FAQs…
+                </TableCell>
+              </TableRow>
+            ) : paginatedFaqs.length > 0 ? (
               paginatedFaqs.map((faq, idx) => (
                 <TableRow key={faq.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
                   <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
@@ -286,18 +352,14 @@ export default function FaqPage() {
       <DeleteFaqModal
         open={!!deleteTarget}
         faq={deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          const q = deleteTarget.question;
-          setFaqs((prev) => prev.filter((f) => f.id !== deleteTarget.id));
-          setDeleteTarget(null);
-          toast.success(`FAQ "${q}" deleted successfully!`);
+        isDeleting={isDeletingFaq}
+        onCancel={() => {
+          if (!isDeletingFaq) setDeleteTarget(null);
         }}
+        onConfirm={confirmDeleteFaq}
       />
 
       <ViewFaqModal open={!!viewTarget} faq={viewTarget} onClose={() => setViewTarget(null)} />
     </div>
   );
 }
-

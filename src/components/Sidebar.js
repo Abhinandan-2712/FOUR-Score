@@ -7,6 +7,7 @@ import { LiaDumbbellSolid } from "react-icons/lia";
 import { LuUsers, LuApple } from "react-icons/lu";      
 import { BiBell, BiComment } from "react-icons/bi";
 import { HiOutlineCog } from "react-icons/hi";
+import { PiLayoutLight } from "react-icons/pi";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -63,6 +64,11 @@ export default function Sidebar() {
       icon: FaRegFileAlt 
     },
     {
+      href: "/wireframe",
+      label: "Wireframe",
+      icon: PiLayoutLight,
+    },
+    {
       href: "/settings",
       label: "Settings",
       icon: HiOutlineCog,
@@ -94,7 +100,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 p-3 rounded-4xl transition 
+              className={`flex items-center gap-3 p-2.5 rounded-4xl transition 
                 ${active
                   ? "bg-[#0D3D7A] text-white font-semibold "
                   : "hover:bg-[#0D3D7A]"

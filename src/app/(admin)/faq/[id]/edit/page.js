@@ -7,29 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { BiComment } from "react-icons/bi";
-import { MOCK_FAQS } from "../../data";
-import dynamic from "next/dynamic";
-
-const CKEditor = dynamic(
-  () => import("@ckeditor/ckeditor5-react").then((mod) => mod.CKEditor),
-  { ssr: false }
-);
-
-const ClassicEditor = dynamic(
-  () => import("@ckeditor/ckeditor5-build-classic"),
-  { ssr: false }
-);
+import { fetchFaqById, updateFaq } from "@/lib/faqApi";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function EditFaqPage() {
   const router = useRouter();
   const params = useParams();
-  const faqId = parseInt(params.id);
+  const faqId = params?.id != null ? String(params.id) : "";
 
   const [faq, setFaq] = useState(null);
+  /** loading | ready | error */
+  const [loadState, setLoadState] = useState("loading");
   const [question, setQuestion] = useState("");
   const [category, setCategory] = useState("General");
   const [status, setStatus] = useState("Active");
   const [answer, setAnswer] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const categoryOptions = ["General", "Account", "Subscription", "Workout", "Nutrition", "Recovery"];
 
@@ -41,32 +34,97 @@ export default function EditFaqPage() {
     }`;
 
   useEffect(() => {
-    const found = MOCK_FAQS.find((f) => f.id === faqId);
-    if (!found) {
-      toast.error("FAQ not found");
+    if (!faqId) {
       router.push("/faq");
       return;
     }
-    setFaq(found);
-    setQuestion(found.question || "");
-    setCategory(found.category || "General");
-    setStatus(found.status || "Active");
-    setAnswer(found.answer || "");
+    let cancelled = false;
+    setLoadState("loading");
+    (async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+        setLoadState("error");
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.");
+        setLoadState("error");
+        return;
+      }
+      try {
+        const found = await fetchFaqById(faqId, { token, baseUrl });
+        if (cancelled) return;
+        if (!found) {
+          toast.error("FAQ not found");
+          setLoadState("error");
+          router.push("/faq");
+          return;
+        }
+        setFaq(found);
+        setQuestion(found.question || "");
+        setCategory(found.category || "General");
+        setStatus(found.status || "Active");
+        setAnswer(found.answer || "");
+        setLoadState("ready");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Load FAQ failed:", err?.adminPayload || err?.message);
+        toast.error(err?.adminPayload?.message || err?.message || "Failed to load FAQ");
+        setLoadState("error");
+        router.push("/faq");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [faqId, router]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!question.trim() || !answer.trim()) {
       toast.error("Please fill in question and answer");
       return;
     }
-    toast.success(`FAQ "${question}" updated successfully!`);
-    router.push("/faq");
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await updateFaq(
+        faqId,
+        { question: question.trim(), category, status, answer },
+        { token, baseUrl }
+      );
+      toast.success(`FAQ "${question}" updated successfully!`);
+      router.push("/faq");
+    } catch (err) {
+      console.error("Update FAQ failed:", err?.adminPayload || err?.message);
+      toast.error(err?.adminPayload?.message || err?.message || "Failed to update FAQ");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (!faq) {
+  if (loadState === "loading") {
     return (
       <div className="min-h-[80vh] py-8 px-1 flex items-center justify-center">
-        <p className="text-[#2158A3]">Loading...</p>
+        <p className="text-[#2158A3]">Loading…</p>
+      </div>
+    );
+  }
+
+  if (loadState === "error" || !faq) {
+    return (
+      <div className="min-h-[80vh] py-8 px-1 flex items-center justify-center">
+        <p className="text-[#2158A3]">Could not load FAQ.</p>
       </div>
     );
   }
@@ -140,34 +198,16 @@ export default function EditFaqPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-[#0A3161]">
+          <label htmlFor="faq-answer-edit" className="text-sm font-medium text-[#0A3161]">
             Answer <span className="text-red-500">*</span>
           </label>
-          <div className="mt-2 border border-[#C8D7E9] rounded-lg overflow-hidden [&_.ck-editor__editable]:min-h-[260px] [&_.ck-editor__editable]:p-4 [&_.ck-toolbar]:border-t-0 [&_.ck-toolbar]:border-l-0 [&_.ck-toolbar]:border-r-0 [&_.ck-toolbar]:border-b [&_.ck-toolbar]:border-gray-200">
-            <CKEditor
-              editor={ClassicEditor}
-              data={answer}
-              onChange={(event, editor) => setAnswer(editor.getData())}
-              config={{
-                placeholder: "Write the answer...",
-                toolbar: [
-                  "heading",
-                  "|",
-                  "bold",
-                  "italic",
-                  "link",
-                  "bulletedList",
-                  "numberedList",
-                  "|",
-                  "blockQuote",
-                  "insertTable",
-                  "|",
-                  "undo",
-                  "redo",
-                ],
-              }}
-            />
-          </div>
+          <Textarea
+            id="faq-answer-edit"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Write the answer. HTML is allowed."
+            className="mt-2 min-h-[280px] w-full rounded-lg border-[#C8D7E9] bg-white px-4 py-3 text-sm text-[#0A3161] shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30 resize-y"
+          />
         </div>
 
         <div className="mt-2 grid gap-4 md:grid-cols-2">
@@ -176,6 +216,7 @@ export default function EditFaqPage() {
             variant="outline"
             className="w-full justify-center"
             onClick={() => router.push("/faq")}
+            disabled={isSaving}
           >
             Cancel
           </Button>
@@ -183,12 +224,12 @@ export default function EditFaqPage() {
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
             onClick={handleSave}
+            disabled={isSaving}
           >
-            Update FAQ
+            {isSaving ? "Saving…" : "Update FAQ"}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-

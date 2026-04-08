@@ -1,12 +1,19 @@
 "use client";
 import { Bar } from "react-chartjs-2";
 
-export default function ActiveUsersWeekChart({ data, baseOptions }) {
+export default function ActiveUsersWeekChart({
+  data,
+  baseOptions,
+  title = "Activity (This Week)",
+  subtitle = "Daily activity count",
+  yMax = 900,
+  yStep = 200,
+}) {
   return (
     <div className="bg-white p-6 rounded-2xl border border-[#C8D7E9] shadow-md h-72 md:h-96 flex flex-col">
       <div className="mb-4 flex-shrink-0">
-        <h3 className="text-base font-semibold text-[#0A3161]">Active Users This Week</h3>
-        <p className="text-xs text-[#2158A3] mt-1">Daily active user count</p>
+        <h3 className="text-base font-semibold text-[#0A3161]">{title}</h3>
+        <p className="text-xs text-[#2158A3] mt-1">{subtitle}</p>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <Bar
@@ -36,9 +43,9 @@ export default function ActiveUsersWeekChart({ data, baseOptions }) {
             y: {
               ...baseOptions.scales.y,
               beginAtZero: true,
-              max: 900,
+              max: yMax,
               ticks: {
-                stepSize: 200,
+                stepSize: yStep,
                 color: "#4b5563",
                 maxTicksLimit: 5,
               },

@@ -25,6 +25,7 @@ import {
 
 const TABS = [
   { id: "privacy", label: "Privacy Policy" },
+  { id: "terms", label: "Terms & Conditions" },
   { id: "about", label: "About App" },
   { id: "social", label: "Social Media" },
   { id: "quotes", label: "Quotes" },
@@ -34,6 +35,8 @@ function getTabMeta(tabId) {
   switch (tabId) {
     case "privacy":
       return { contentType: "Privacy Policy", title: "Privacy Policy" };
+    case "terms":
+      return { contentType: "Terms & Conditions", title: "Terms & Conditions" };
     case "about":
       // existing mock uses "About Us"
       return { contentType: "About Us", title: "About App" };
@@ -51,6 +54,7 @@ export default function ContentManagement() {
   const [activeTab, setActiveTab] = useState("privacy");
   const [editorTitle, setEditorTitle] = useState("Privacy Policy Editor");
   const [editorData, setEditorData] = useState("");
+  const [termsDocId, setTermsDocId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [socialItems, setSocialItems] = useState([]);
   const [socialSearch, setSocialSearch] = useState("");
@@ -216,11 +220,19 @@ export default function ContentManagement() {
     setEditorTitle(activeTab === "social" ? `${title} Manager` : `${title} Editor`);
 
     // Privacy Policy + About App are backed by API; other tabs still use mock/local state.
-    if (activeTab === "privacy" || activeTab === "about") {
+    if (activeTab === "privacy" || activeTab === "about" || activeTab === "terms") {
       const isPrivacy = activeTab === "privacy";
-      const fetchUrl = isPrivacy
-        ? "/api/admin/getAll-privacy-policy"
-        : "/api/admin/getAll-about-app";
+      const isTerms = activeTab === "terms";
+      const fetchUrls = isTerms
+        ? [
+            "/api/admin/getAll-terms-condition",
+            "/api/admin/getAll-terms-conditions",
+            "/api/admin/get-all-terms-condition",
+            "/api/admin/get-all-terms-conditions",
+          ]
+        : [
+            isPrivacy ? "/api/admin/getAll-privacy-policy" : "/api/admin/getAll-about-app",
+          ];
 
       const fetchContent = async () => {
         const token = localStorage.getItem("token");
@@ -237,23 +249,34 @@ export default function ContentManagement() {
 
         setIsLoading(true);
         try {
-          const res = await axios.get(`${baseUrl}${fetchUrl}`, {
-            headers: { token },
-          });
+          let res;
+          for (const u of fetchUrls) {
+            try {
+              res = await axios.get(`${baseUrl}${u}`, {
+                headers: { token, Authorization: `Bearer ${token}` },
+              });
+              break;
+            } catch (e) {
+              if (e?.response?.status === 404) continue;
+              throw e;
+            }
+          }
+
           const list = res?.data?.result ?? [];
-          // Use the latest item (API currently returns array).
           const latest = Array.isArray(list) ? list[0] : null;
           setEditorData(latest?.content ?? "");
+          if (isTerms) setTermsDocId(latest?._id ?? latest?.id ?? null);
         } catch (err) {
           console.error(
-            `Fetch ${isPrivacy ? "privacy policy" : "about app"} failed:`,
+            `Fetch ${isTerms ? "terms & conditions" : isPrivacy ? "privacy policy" : "about app"} failed:`,
             err?.response?.data || err?.message
           );
           toast.error(
             err?.response?.data?.message ||
-              `Failed to fetch ${isPrivacy ? "privacy policy" : "about app"}`
+              `Failed to fetch ${isTerms ? "terms & conditions" : isPrivacy ? "privacy policy" : "about app"}`
           );
           setEditorData("");
+          if (isTerms) setTermsDocId(null);
         } finally {
           setIsLoading(false);
         }
@@ -373,6 +396,57 @@ export default function ContentManagement() {
       };
 
       saveContent();
+      return;
+    }
+
+    if (activeTab === "terms") {
+      const saveTerms = async () => {
+        const token = localStorage.getItem("token");
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+        if (!baseUrl) {
+          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+          return;
+        }
+        if (!token) {
+          toast.error("Session expired. Please login again.");
+          return;
+        }
+
+        setIsLoading(true);
+        try {
+          const formData = new FormData();
+          formData.append("content", editorData);
+
+          const endpoint = termsDocId
+            ? `${baseUrl}/api/admin/update-terms-condition/${encodeURIComponent(termsDocId)}`
+            : `${baseUrl}/api/admin/terms-condition`;
+
+          const res = await axios.post(endpoint, formData, {
+            headers: { token, Authorization: `Bearer ${token}` },
+          });
+
+          if (res?.data?.success) {
+            toast.success("Terms & Conditions saved successfully!");
+            const idFromRes =
+              res?.data?.result?._id ??
+              res?.data?.result?.id ??
+              res?.data?.data?._id ??
+              res?.data?.data?.id ??
+              null;
+            if (idFromRes) setTermsDocId(String(idFromRes));
+          } else {
+            toast.error(res?.data?.message || "Failed to save terms & conditions");
+          }
+        } catch (err) {
+          console.error("Save terms & conditions failed:", err?.response?.data || err?.message);
+          toast.error(err?.response?.data?.message || "Failed to save terms & conditions");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      saveTerms();
       return;
     }
 

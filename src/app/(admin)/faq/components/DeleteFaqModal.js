@@ -3,13 +3,13 @@
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 
-export default function DeleteFaqModal({ open, faq, onCancel, onConfirm }) {
+export default function DeleteFaqModal({ open, faq, onCancel, onConfirm, isDeleting }) {
   if (!open || !faq) return null;
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
-      onClick={onCancel}
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      onClick={() => !isDeleting && onCancel()}
     >
       <div
         className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-hidden"
@@ -61,15 +61,17 @@ export default function DeleteFaqModal({ open, faq, onCancel, onConfirm }) {
             <Button
               variant="outline"
               onClick={onCancel}
+              disabled={isDeleting}
               className="px-5 border-[#C8D7E9] text-[#0A3161] font-medium"
             >
               Cancel
             </Button>
             <Button
               onClick={onConfirm}
+              disabled={isDeleting}
               className="px-5 bg-[#0A3161] hover:bg-[#0D3D7A] text-white font-semibold shadow-sm"
             >
-              Yes, Delete
+              {isDeleting ? "Deleting…" : "Yes, Delete"}
             </Button>
           </div>
         </div>

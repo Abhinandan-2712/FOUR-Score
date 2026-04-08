@@ -13,7 +13,7 @@ export default function Card({
   iconColor = "text-blue-600",
 }) {
   return (
-    <div className="w-full max-w-sm rounded-lg border border-[#C8D7E9] bg-white shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="w-full rounded-2xl border border-[#C8D7E9] bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
       <div className="p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -29,12 +29,10 @@ export default function Card({
           >
             <Icon className={`text-2xl ${iconColor}`} />
           </div>
-
-
         </div>
 
         <div className="my-2 h-px w-full bg-gray-100" />
-        <div className="flex items-center gap-4 ">
+        <div className="flex items-center gap-4">
           <div
             className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm
               ${isIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}
@@ -44,9 +42,7 @@ export default function Card({
             {percentage}%
           </div>
           <p className="text-sm font-medium text-gray-500">{para}</p>
-
         </div>
-
       </div>
     </div>
   );

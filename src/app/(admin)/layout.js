@@ -29,7 +29,7 @@ import Navbar from "@/components/Navbar";
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="min-h-screen bg-[#F2F5FA]">
+    <div className="min-h-screen bg-[#F6F9FF]">
       {/* Sidebar */}
       <aside className="hidden sm:block fixed top-0 left-0 h-screen w-64 bg-white shadow-md z-50">
          <Sidebar />
@@ -38,12 +38,12 @@ export default function AdminLayout({ children }) {
       {/* Main area */}
       <div className="sm:ml-64">
         {/* Navbar */}
-        <div className="fixed top-0 sm:left-64 right-0 h-16  z-10 p-4">
+        <div className="fixed top-0 sm:left-64 right-0 h-16 z-10 p-4">
           <Navbar />
         </div>
 
         {/* Scrollable content */}
-        <main className="pt-16 p-4 ">
+        <main className="pt-16 p-4">
           {children}
         </main>
       </div>
