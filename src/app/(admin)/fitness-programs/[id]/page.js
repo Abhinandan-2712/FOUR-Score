@@ -80,10 +80,8 @@ export default function ViewFitnessProgramPage() {
         const empty = createEmptyProgramDetailForId(id);
         const d = apiRowToEditorDraft(raw, empty);
         const s = mapProgramFromApi(raw);
+        // Use cached as fast placeholder, but still fetch full detail by id.
         finish(s, d);
-        return () => {
-          cancelled = true;
-        };
       }
     } catch {
       /* ignore */

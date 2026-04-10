@@ -42,10 +42,8 @@ export default function EditFitnessProgramPage() {
       if (cached) {
         const raw = JSON.parse(cached);
         const empty = createEmptyProgramDetailForId(id);
+        // Use cached data as fast placeholder, but still fetch full detail by id.
         applyDraft(apiRowToEditorDraft(raw, empty));
-        return () => {
-          cancelled = true;
-        };
       }
     } catch {
       /* ignore */

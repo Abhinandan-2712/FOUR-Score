@@ -29,23 +29,19 @@ import Navbar from "@/components/Navbar";
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="min-h-screen bg-[#F6F9FF]">
+    <div className="admin-shell text-foreground">
       {/* Sidebar */}
-      <aside className="hidden sm:block fixed top-0 left-0 h-screen w-64 bg-white shadow-md z-50">
-         <Sidebar />
-       </aside>
+      <aside className="hidden sm:block fixed top-0 left-0 z-50 h-screen w-64 overflow-hidden rounded-r-2xl border-r border-sidebar-border bg-sidebar shadow-[var(--shadow-premium)]">
+        <Sidebar />
+      </aside>
 
-      {/* Main area */}
+      {/* Main area: sticky header avoids content sliding under a fixed bar (overlap / “ghost” title) */}
       <div className="sm:ml-64">
-        {/* Navbar */}
-        <div className="fixed top-0 sm:left-64 right-0 h-16 z-10 p-4">
+        <div className="sticky top-0 z-40  px-3 pb-2 pt-3 backdrop-blur-md sm:px-4 sm:pb-3 sm:pt-4">
           <Navbar />
         </div>
 
-        {/* Scrollable content */}
-        <main className="pt-16 p-4">
-          {children}
-        </main>
+        <main className="min-h-screen px-4 pb-8 sm:px-6 sm:pb-10">{children}</main>
       </div>
     </div>
   );

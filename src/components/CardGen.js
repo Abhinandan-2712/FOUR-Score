@@ -13,25 +13,25 @@ export default function Card({
   iconColor = "text-blue-600",
 }) {
   return (
-    <div className="w-full rounded-2xl border border-[#C8D7E9] bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
+    <div className="surface-card w-full transition-shadow duration-300 hover:shadow-[var(--shadow-premium)]">
       <div className="p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-normal text-[#2158A3]">{title}</p>
-            <h1 className="mt-1 text-xl font-semibold leading-7 tracking-normal text-[#0A3161]">
+            <p className="text-sm font-medium text-primary/75">{title}</p>
+            <h1 className="mt-1 text-xl font-semibold leading-7 tracking-tight text-primary">
               {isCurrency
                 ? `$${Number(amount).toLocaleString()}`
                 : Number(amount).toLocaleString()}
             </h1>
           </div>
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-lg ${iconBg}`}
+            className={`flex h-12 w-12 items-center justify-center rounded-xl ring-1 ring-border/60 ${iconBg}`}
           >
             <Icon className={`text-2xl ${iconColor}`} />
           </div>
         </div>
 
-        <div className="my-2 h-px w-full bg-gray-100" />
+        <div className="my-3 h-px w-full bg-border/70" />
         <div className="flex items-center gap-4">
           <div
             className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm
@@ -41,7 +41,7 @@ export default function Card({
             {isIncrease ? <IoIosTrendingUp /> : <IoIosTrendingDown />}
             {percentage}%
           </div>
-          <p className="text-sm font-medium text-gray-500">{para}</p>
+          <p className="text-sm font-medium text-muted-foreground">{para}</p>
         </div>
       </div>
     </div>

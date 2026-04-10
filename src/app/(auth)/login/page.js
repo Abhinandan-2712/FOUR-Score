@@ -4,6 +4,8 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -56,75 +58,93 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Log in</h1>
+      <div className="w-full">
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Admin access
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+            Log in
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sign in to manage users, programs, and content.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground/90">
+              Email
+            </label>
+            <Input
+              type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            required
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A3B73]/30 focus:border-[#1A3B73] transition"
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder="name@company.com"
               required
-              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-11 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A3B73]/30 focus:border-[#1A3B73] transition"
+              autoComplete="email"
+              className="h-11 rounded-xl bg-background"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-            </button>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground/90">
+              Password
+            </label>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                className="h-11 rounded-xl bg-background pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={keepLoggedIn}
                 onChange={(e) => setKeepLoggedIn(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-[#1A3B73] focus:ring-[#1A3B73]"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
               />
-              <span className="text-sm text-gray-600">Keep me logged in</span>
+              <span className="text-sm text-muted-foreground">Keep me logged in</span>
             </label>
 
             <button
               type="button"
               onClick={() => router.push("/forgot-password")}
-              className="text-sm text-[#1A3B73] hover:text-[#0A3161] hover:underline"
+              className="text-sm font-medium text-primary hover:underline"
             >
               Forgot password?
             </button>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#0A3161] hover:bg-[#0A3161] text-white py-3 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl">
             {loading ? "Logging in..." : "Log in"}
-          </button>
+          </Button>
         </form>
       </div>
 
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-500">
-          <a href="/term-contions" className="hover:text-gray-700 underline">
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="text-xs text-muted-foreground">
+          <a href="/term-contions" className="font-medium text-foreground/70 underline-offset-4 hover:text-foreground hover:underline">
             Terms of Use
           </a>
-          <span className="mx-2">|</span>
-          <a href="#" className="hover:text-gray-700 underline">
+          <span className="mx-2 text-muted-foreground/70">|</span>
+          <a href="#" className="font-medium text-foreground/70 underline-offset-4 hover:text-foreground hover:underline">
             Privacy Policy
           </a>
         </p>

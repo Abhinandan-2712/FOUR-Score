@@ -169,7 +169,6 @@ export default function FitnessProgramsPage() {
     try {
       if (p?._raw) {
         sessionStorage.setItem(programCacheKey(p.id), JSON.stringify(p._raw));
-        sessionStorage.setItem(programEditKey(p.id), JSON.stringify(p._raw));
       }
     } catch (e) {
       console.warn("sessionStorage program cache failed", e);
@@ -185,18 +184,18 @@ export default function FitnessProgramsPage() {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="min-h-[80vh] py-8 px-1">
+    <div className="min-h-[80vh] px-1 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal">
+          <h1 className="text-xl font-semibold leading-6 tracking-tight text-primary">
             Fitness Programs
           </h1>
-          <p className="mt-1 text-sm text-[#2158A3]">
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage programs from the API. Reference PDF:{" "}
-            <span className="text-[#5671A6]">not the member app preview.</span>
+            <span className="text-muted-foreground/80">not the member app preview.</span>
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0 w-full sm:w-auto">
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {/* <Button
             type="button"
             variant="outline"
@@ -205,17 +204,13 @@ export default function FitnessProgramsPage() {
           >
             <Link href="/fitness-programs/reference">PDF: Logic &amp; catalog</Link>
           </Button> */}
-          <Button
-            type="button"
-            className="bg-[#0A3161] hover:bg-[#0D3D7A] w-full sm:w-auto"
-            onClick={() => router.push("/fitness-programs/new")}
-          >
+          <Button type="button" className="w-full sm:w-auto" onClick={() => router.push("/fitness-programs/new")}>
             + Add Program
           </Button>
         </div>
       </div>
 
-      <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
+      <div className="surface-card mt-6 p-4">
         <Input
           placeholder="Search by title, level, or tagline..."
           value={searchTerm}
@@ -223,48 +218,51 @@ export default function FitnessProgramsPage() {
             setSearchTerm(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full border-[#C8D7E9] rounded-md"
+          className="w-full rounded-xl border-border bg-background"
         />
       </div>
 
-      <div className="mt-6 w-full overflow-x-auto border border-[#C8D7E9] rounded-lg shadow-md max-h-[520px] overflow-y-auto">
+      <div className="surface-card mt-6 max-h-[520px] w-full overflow-x-auto overflow-y-auto">
         <Table className="min-w-[1000px]">
-          <TableHeader className="sticky top-0 z-10 bg-[#F2F5FA]">
-            <TableRow className="border-b bg-[#F2F5FA]">
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">PROGRAM</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">LEVEL</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">DURATION</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">FREQ. / WK</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">AVG. SESSION</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">STATUS</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">UPDATED</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3 w-[148px] min-w-[148px]">
+          <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
+            <TableRow className="border-b border-border/80 bg-muted/90">
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">PROGRAM</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">LEVEL</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">DURATION</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">FREQ. / WK</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">AVG. SESSION</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">STATUS</TableHead>
+              <TableHead className="px-4 py-3 font-semibold text-primary/85">UPDATED</TableHead>
+              <TableHead className="min-w-[148px] w-[148px] px-4 py-3 font-semibold text-primary/85">
                 ACTIONS
               </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="bg-white">
+          <TableBody className="bg-card">
             {pageRows.length > 0 ? (
               pageRows.map((p, idx) => (
-                <TableRow key={p.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
-                  <TableCell className="px-4 py-3 max-w-[280px]">
-                    <p className="font-medium text-[#0A3161]">{p.title}</p>
+                <TableRow
+                  key={p.id}
+                  className={idx % 2 === 1 ? "bg-muted/35" : ""}
+                >
+                  <TableCell className="max-w-[280px] px-4 py-3">
+                    <p className="font-medium text-primary">{p.title}</p>
                     {p.subHeader && (
-                      <p className="text-xs text-[#5671A6] mt-1 line-clamp-2" title={p.subHeader}>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground" title={p.subHeader}>
                         {p.subHeader}
                       </p>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-blue-50 text-blue-800 px-2.5 py-0.5 text-xs font-medium border border-blue-100">
+                    <span className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-xs font-medium text-primary">
                       {p.level}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-[#2158A3] text-sm">
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">
                     {p.durationWeeks} weeks
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-[#2158A3] text-sm">{p.frequencyPerWeek} days</TableCell>
-                  <TableCell className="px-4 py-3 text-[#2158A3] text-sm">{p.avgSessionMinutes} min</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">{p.frequencyPerWeek} days</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">{p.avgSessionMinutes} min</TableCell>
                   <TableCell className="px-4 py-3">
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -276,7 +274,7 @@ export default function FitnessProgramsPage() {
                       {p.status}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-[#2158A3] text-sm">{p.updatedAt}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-muted-foreground">{p.updatedAt}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <button
@@ -297,7 +295,7 @@ export default function FitnessProgramsPage() {
                           stashProgramForRoute(p);
                           router.push(`/fitness-programs/${p.id}/edit`);
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
                         aria-label="Edit program"
                         title="Edit"
                       >
@@ -318,7 +316,7 @@ export default function FitnessProgramsPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-gray-500 py-10">
+                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                   {isFetching
                     ? "Loading programs…"
                     : programs.length === 0
@@ -331,11 +329,11 @@ export default function FitnessProgramsPage() {
         </Table>
       </div>
 
-      <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-lg border border-[#C8D7E9] shadow-md px-4 py-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="surface-card mt-4 flex flex-col items-center justify-between gap-4 px-4 py-4 sm:flex-row">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Rows per page:</span>
           <select
-            className="border border-[#C8D7E9] rounded-md px-2 py-1 bg-white text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30"
+            className="rounded-lg border border-border bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/40"
             value={rowsPerPage}
             onChange={(e) => {
               setRowsPerPage(Number(e.target.value));
@@ -349,7 +347,7 @@ export default function FitnessProgramsPage() {
             ))}
           </select>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Showing {totalItems === 0 ? 0 : start + 1}-{Math.min(start + rowsPerPage, totalItems)} of{" "}
           {totalItems} programs
         </p>
@@ -358,10 +356,10 @@ export default function FitnessProgramsPage() {
             type="button"
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors ${
+            className={`h-10 rounded-lg border px-4 text-sm font-medium transition-colors ${
               currentPage === 1
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
+                ? "cursor-not-allowed border-border bg-muted text-muted-foreground/60"
+                : "border-border bg-card text-foreground hover:bg-muted/80"
             }`}
           >
             &lt; Previous
@@ -369,7 +367,7 @@ export default function FitnessProgramsPage() {
           {paginationItems.map((item, idx) => {
             if (item === "…") {
               return (
-                <span key={`e-${idx}`} className="px-2 text-gray-500 select-none">
+                <span key={`e-${idx}`} className="select-none px-2 text-muted-foreground">
                   …
                 </span>
               );
@@ -383,8 +381,8 @@ export default function FitnessProgramsPage() {
                 onClick={() => goToPage(page)}
                 className={`h-10 w-10 rounded-lg border text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-[#0A3161] text-white border-[#0A3161]"
-                    : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-foreground hover:bg-muted/80"
                 }`}
               >
                 {page}
@@ -395,10 +393,10 @@ export default function FitnessProgramsPage() {
             type="button"
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors ${
+            className={`h-10 rounded-lg border px-4 text-sm font-medium transition-colors ${
               currentPage === totalPages
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
+                ? "cursor-not-allowed border-border bg-muted text-muted-foreground/60"
+                : "border-border bg-card text-foreground hover:bg-muted/80"
             }`}
           >
             Next &gt;

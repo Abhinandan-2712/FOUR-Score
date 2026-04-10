@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { FiMenu, FiX } from "react-icons/fi"; 
 import Sidebar from "@/components/Sidebar";
+import { createPortal } from "react-dom";
 
 export default function Navbar() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
+  const [isMounted, setIsMounted] = useState(false);
 
   const handleLogout = () => {
     // console.log("User logged out");
@@ -19,22 +21,33 @@ export default function Navbar() {
     router.replace("/login");
   };
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setIsModalOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isModalOpen]);
+
   return (
     <>
-      <header className="w-full bg-white border-b border-gray-200 shadow px-4 py-3 sticky top-0 z-30">
-        <nav className="flex justify-between items-center gap-4">
-          {/* === Mobile menu toggle button (visible only on <sm) === */}
+      <header className="glass-header sticky top-0 z-30 w-full rounded-2xl border border-border/60 px-4 py-3">
+        <nav className="flex items-center justify-between gap-4">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="sm:hidden text-2xl text-gray-700"
+            className="text-2xl text-foreground/80 transition-colors hover:text-foreground sm:hidden"
             aria-label="Open Sidebar"
           >
             <FiMenu />
           </button>
 
-          {/* Title */}
-          <div className="text-xl sm:text-2xl font-bold text-gray-800">
-            Welcome Admin 👋
+          <div className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            Welcome Admin
           </div>
 
           {/* Logout button */}
@@ -59,8 +72,8 @@ export default function Navbar() {
           ></div>
 
           {/* Sidebar content — height constrained so nav list scrolls */}
-          <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh w-64 flex-col bg-[#0A3161] shadow-lg transition-transform duration-300 sm:hidden">
-            <div className="flex shrink-0 items-center justify-end border-b border-[#0D3D7A] px-3 py-2">
+          <aside className="fixed inset-y-0 left-0 z-50 flex h-dvh w-64 flex-col overflow-hidden rounded-r-2xl border-r border-sidebar-border bg-sidebar shadow-[var(--shadow-premium)] transition-transform duration-300 sm:hidden">
+            <div className="flex shrink-0 items-center justify-end border-b border-sidebar-border px-3 py-2">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
@@ -78,19 +91,32 @@ export default function Navbar() {
       )}
 
       {/* ✅ Logout Confirmation Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl p-6 w-[90%] max-w-sm text-center shadow-xl">
-            <h2 className="text-lg font-semibold mb-4">
-              Are you sure you want to logout?
-            </h2>
-            <div className="flex justify-center gap-4 flex-wrap">
-              <Button onClick={handleLogout}>Yes, Logout</Button>
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {isMounted && isModalOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setIsModalOpen(false)}
+            >
+              <div
+                className="surface-card w-[90%] max-w-sm p-6 text-center shadow-[var(--shadow-premium)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="mb-4 text-lg font-semibold text-foreground">
+                  Are you sure you want to logout?
+                </h2>
+                <div className="flex flex-wrap justify-center gap-4">
+                  <Button onClick={handleLogout}>Yes, Logout</Button>
+                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }

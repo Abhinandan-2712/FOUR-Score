@@ -40,6 +40,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiData, setApiData] = useState(null);
   const [rawApiPayload, setRawApiPayload] = useState(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   const timeframeLabelMap = {
     all: "All time",
     last_week: "Last week",
@@ -231,11 +234,11 @@ export default function Dashboard() {
   const isDev = process.env.NODE_ENV !== "production";
 
   const Skeleton = ({ className }) => (
-    <div className={`animate-pulse rounded-xl bg-[#EEF4FF] ${className}`} />
+    <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
   );
 
   const SkeletonCard = () => (
-    <div className="w-full rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+    <div className="surface-card w-full p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <Skeleton className="h-4 w-28" />
@@ -243,7 +246,7 @@ export default function Dashboard() {
         </div>
         <Skeleton className="h-12 w-12 rounded-2xl" />
       </div>
-      <div className="my-4 h-px w-full bg-gray-100" />
+      <div className="my-4 h-px w-full bg-border/80" />
       <div className="flex items-center gap-4">
         <Skeleton className="h-6 w-16 rounded-full" />
         <Skeleton className="h-4 w-40" />
@@ -252,9 +255,9 @@ export default function Dashboard() {
   );
 
   const SkeletonPanel = ({ title }) => (
-    <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+    <div className="surface-card p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-[#0A3161]">{title}</p>
+        <p className="text-sm font-semibold text-primary">{title}</p>
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
       <Skeleton className="mt-4 h-44 w-full" />
@@ -267,8 +270,8 @@ export default function Dashboard() {
   );
 
   const SkeletonDoughnut = ({ title }) => (
-    <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm h-72 md:h-96">
-      <p className="text-sm font-semibold text-[#0A3161]">{title}</p>
+    <div className="surface-card h-72 p-6 md:h-96">
+      <p className="text-sm font-semibold text-primary">{title}</p>
       <div className="mt-6 flex items-center justify-center">
         <Skeleton className="h-40 w-40 rounded-full" />
       </div>
@@ -281,7 +284,38 @@ export default function Dashboard() {
     </div>
   );
 
-  const shouldShowSkeleton = isLoading && !apiData;
+  // Show skeleton until we have real API data.
+  const shouldShowSkeleton = isLoading || !hasLoadedData;
+
+  const getChartMax = (chart) => {
+    const ds = chart?.datasets ?? [];
+    let max = 0;
+    for (const d of ds) {
+      const arr = Array.isArray(d?.data) ? d.data : [];
+      for (const v of arr) {
+        const n = Number(v);
+        if (Number.isFinite(n)) max = Math.max(max, n);
+      }
+    }
+    return max;
+  };
+
+  const niceMax = (max, minMax = 5) => {
+    const m = Math.max(minMax, Math.ceil(max * 1.25));
+    if (m <= 10) return 10;
+    if (m <= 25) return 25;
+    if (m <= 50) return 50;
+    if (m <= 100) return 100;
+    return Math.ceil(m / 100) * 100;
+  };
+
+  const niceStep = (yMax) => {
+    if (yMax <= 10) return 2;
+    if (yMax <= 25) return 5;
+    if (yMax <= 50) return 10;
+    if (yMax <= 100) return 20;
+    return Math.max(50, Math.round(yMax / 4 / 10) * 10);
+  };
 
   const timeframeChips = useMemo(
     () => [
@@ -380,8 +414,11 @@ export default function Dashboard() {
     { label: "Manage Users", href: "/users" },
     { label: "Exercise Library", href: "/exercise-library" },
     { label: "Nutrition & Macros", href: "/nutrition-macros" },
+    { label: "Recovery Content", href: "/recovery-content" },
     { label: "Content Management", href: "/content-management" },
+    { label: "FAQ", href: "/faq" },
     { label: "Settings", href: "/settings" },
+
   ];
 
   const recentActivity =
@@ -426,30 +463,27 @@ export default function Dashboard() {
       ],
     });
 
-  // Active users trend (monthly)
-  const activeUsersMonthlyData =
-    apiData?.charts?.activeUsersMonthly ??
-    (apiData ? emptyLineChart("Active Users", "#16a34a") : {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  // Exercises breakdown (bar) — derived from exercise types donut
+  const exerciseTypesBarData = (() => {
+    const d = apiData?.doughnuts?.exerciseTypes;
+    const labels = d?.labels;
+    const data = d?.datasets?.[0]?.data;
+    if (!Array.isArray(labels) || !Array.isArray(data)) {
+      return apiData ? emptyBarChart("Exercises", "#0A3161") : undefined;
+    }
+    return {
+      labels,
       datasets: [
         {
-          label: "Active Users",
-          data: [620, 710, 780, 740, 860, 820],
-          borderColor: "#16a34a",
-          backgroundColor: (ctx) => {
-            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, "rgba(22,163,74,0.28)");
-            gradient.addColorStop(1, "rgba(22,163,74,0)");
-            return gradient;
-          },
-          pointBackgroundColor: "#16a34a",
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.35,
-          fill: true,
+          label: "Exercises",
+          data,
+          backgroundColor: "#0A3161",
+          borderRadius: 6,
+          barThickness: 40,
         },
       ],
-    });
+    };
+  })();
 
   // Exercise completions (this week)
   const exerciseCompletionsWeekData =
@@ -498,6 +532,7 @@ export default function Dashboard() {
       }
 
       setIsLoading(true);
+      setFetchError(null);
       try {
         const endpoints = [`${baseUrl}/api/admin/dashboard`];
         let res = null;
@@ -510,7 +545,6 @@ export default function Dashboard() {
             });
             break;
           } catch (e) {
-            // Try next endpoint
             res = null;
           }
         }
@@ -547,7 +581,7 @@ export default function Dashboard() {
             event: "Meal logged",
             meta: m?.name ?? m?.title ?? "",
           })),
-        ].slice(0, 8);
+        ].slice(0, 5);
 
         setApiData({
           cards: {
@@ -603,32 +637,34 @@ export default function Dashboard() {
           recentActivity: recentActivityUnified,
           topExercises: normalizeArray(tables.topExercisesThisWeek) ?? [],
         });
+        setHasLoadedData(true);
       } catch (e) {
-        toast.error(e?.message || "Failed to load dashboard data.");
+        const msg = e?.response?.data?.message || e?.message || "Failed to load dashboard data.";
+        setFetchError(msg);
+        toast.error(msg);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboard();
-  }, [timeframe]);
+  }, [timeframe, refreshNonce]);
 
   // (Removed FOUR Score component distributions; dashboard is admin modules focused)
 
   return (
-    <div className="min-h-[80vh] h-auto bg-[#F6F9FF]">
-      <div className="mx-auto w-full py-8">
-        {/* Header */}
+    <div className="min-h-[80vh] h-auto">
+      <div className="mx-auto w-full py-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className=" px-4">
-            <h1 className="text-2xl font-semibold text-[#0A3161]">Dashboard</h1>
-            <p className="mt-1 text-sm text-[#2158A3]">
+          <div className="px-1 sm:px-0">
+            
+          <h1 className="text-2xl font-semibold text-[#0A3161]">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
               Admin overview for users, exercise, and nutrition.
             </p>
-
           </div>
-          <div className="flex flex-wrap items-center gap-2 px-4">
-            <span className="text-xs font-medium text-gray-500 mr-1">Timeframe</span>
+          <div className="flex flex-wrap items-center gap-2 px-1 sm:justify-end sm:px-0">
+            <span className="mr-1 text-xs font-medium text-muted-foreground">Timeframe</span>
             {timeframeChips.map((chip) => {
               const active = timeframe === chip.value;
               return (
@@ -639,17 +675,97 @@ export default function Dashboard() {
                   className={[
                     "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
                     active
-                      ? "border-[#0A3161] bg-[#0A3161] text-white"
-                      : "border-[#C8D7E9] bg-white text-[#0A3161] hover:bg-[#EEF4FF]",
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-card text-primary hover:bg-accent",
                   ].join(" ")}
                 >
                   {chip.label}
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setRefreshNonce((n) => n + 1)}
+              className="ml-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-accent"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
+        {shouldShowSkeleton ? (
+          <div>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4 px-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-3 px-4">
+              <SkeletonPanel title="Users" />
+              <SkeletonPanel title="Exercises" />
+              {/* <SkeletonPanel title="Exercise" /> */}
+              <SkeletonPanel title="Nutrition" />
+            </div>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-12 px-4">
+              <div className="lg:col-span-8 grid gap-6">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <SkeletonDoughnut title="Users Status" />
+                  <SkeletonDoughnut title="Exercise Types" />
+                  <SkeletonDoughnut title="Nutrition Logging" />
+                </div>
+                <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[#0A3161]">Top Exercises</p>
+                    <Skeleton className="h-9 w-28 rounded-xl" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-4 grid gap-6">
+                <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-[#0A3161]">Quick Actions</p>
+                  <div className="mt-4 space-y-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-[#0A3161]">Recent Activity</p>
+                  <div className="mt-4 space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3">
+                        <Skeleton className="h-10 w-56" />
+                        <Skeleton className="h-4 w-14" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {fetchError && !isLoading && !hasLoadedData ? (
+              <div className="mt-6 mx-4 rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-semibold text-rose-700">Couldn’t load dashboard</p>
+                <p className="mt-1 text-sm text-slate-600">{fetchError}</p>
+                <button
+                  type="button"
+                  onClick={() => setRefreshNonce((n) => n + 1)}
+                  className="mt-4 rounded-xl border border-[#C8D7E9] bg-white px-4 py-2 text-sm font-semibold text-[#0A3161] hover:bg-[#EEF4FF]"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
         {/* {isDev && rawApiPayload && (
           <div className="mt-4 rounded-2xl border border-[#C8D7E9] bg-white p-4 shadow-sm mx-4">
             <details>
@@ -701,43 +817,43 @@ export default function Dashboard() {
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Card
             title="Total Users"
-            amount={apiData?.cards?.totalUsers ?? 1232}
+            amount={apiData?.cards?.totalUsers ?? 0}
             percentage={12}
             isIncrease={false}
             para={`${timeframeLabelMap[timeframe]} users` ?? "All time users"}
             icon={LuUsers}
-            iconBg="bg-blue-100"
-            iconColor="text-blue-600"
+            iconBg="bg-sky-500/10"
+            iconColor="text-sky-700"
           />
           <Card
             title="Active Users"
-            amount={apiData?.cards?.activeToday ?? 980}
+            amount={apiData?.cards?.activeToday ?? 0}
             percentage={8}
             isIncrease={true}
             para={`${timeframeLabelMap[timeframe]} active users` ?? "All time active users"}
             icon={TbActivityHeartbeat}
-            iconBg="bg-green-100"
-            iconColor="text-green-600"
+            iconBg="bg-emerald-500/10"
+            iconColor="text-emerald-700"
           />
           <Card
             title="Total Exercises"
-            amount={apiData?.cards?.exercisesToday ?? 610}
+            amount={apiData?.cards?.exercisesToday ?? 0}
             percentage={11}
             isIncrease={true}
             para={`${timeframeLabelMap[timeframe]} exercises` ?? "All time exercises"}
             icon={LiaDumbbellSolid}
-            iconBg="bg-rose-100"
-            iconColor="text-rose-600"
+            iconBg="bg-rose-500/10"
+            iconColor="text-rose-700"
           />
           <Card
             title="Total Nutrition Logs"
-            amount={apiData?.cards?.nutritionLogsToday ?? 420}
+            amount={apiData?.cards?.nutritionLogsToday ?? 0}
             percentage={6}
             isIncrease={true}
             para={`${timeframeLabelMap[timeframe]} nutrition logs` ?? "All time nutrition logs"}
             icon={LuApple}
-            iconBg="bg-blue-100"
-            iconColor="text-blue-600"
+            iconBg="bg-indigo-500/10"
+            iconColor="text-indigo-700"
           />
         </div>
 
@@ -748,16 +864,16 @@ export default function Dashboard() {
             baseOptions={baseOptions}
             title="Users"
             subtitle={`${timeframeLabelMap[timeframe]} new users` ?? "All time new users"}
-            yMax={400}
-            yStep={100}
+            yMax={niceMax(getChartMax(newUsersMonthlyData), 5)}
+            yStep={niceStep(niceMax(getChartMax(newUsersMonthlyData), 5))}
           />
-          <UserGrowthChart
-            data={activeUsersMonthlyData}
+          <ActiveUsersWeekChart
+            data={exerciseTypesBarData}
             baseOptions={baseOptions}
-            title="Active Users"
-            subtitle={`${timeframeLabelMap[timeframe]} active users` ?? "All time active users"}
-            yMax={1000}
-            yStep={250}
+            title="Exercises"
+            subtitle="Exercise types (selected timeframe)"
+            yMax={niceMax(getChartMax(exerciseTypesBarData), 5)}
+            yStep={niceStep(niceMax(getChartMax(exerciseTypesBarData), 5))}
           />
           {/* <ActiveUsersWeekChart
           data={exerciseCompletionsWeekData}
@@ -772,8 +888,8 @@ export default function Dashboard() {
             baseOptions={baseOptions}
             title="Nutrition"
             subtitle={`${timeframeLabelMap[timeframe]} adherence` ?? "All time adherence"}
-            yMax={100}
-            yStep={20}
+            yMax={niceMax(getChartMax(nutritionAdherenceWeekData), 10)}
+            yStep={niceStep(niceMax(getChartMax(nutritionAdherenceWeekData), 10))}
           />
         </div>
 
@@ -799,48 +915,55 @@ export default function Dashboard() {
             </div>
 
             {/* Fills the left-side blank space */}
-            <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
+            <div className="surface-card p-6">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-[#0A3161]">
-                    Top Exercises ({timeframeLabelMap[timeframe]} exercises)
+                  <h2 className="text-base font-semibold tracking-tight text-foreground">
+                    Top Exercises
                   </h2>
-                  <p className="mt-1 text-xs text-[#2158A3]">
-                    Highest completions across all users.
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {timeframeLabelMap[timeframe]} • Highest completions across users
                   </p>
                 </div>
-                <button className="shrink-0 rounded-xl border border-[#C8D7E9] bg-white px-4 py-2 text-sm font-semibold text-[#0A3161] hover:bg-[#EEF4FF]">
+                <Link
+                  href="/exercise-library"
+                  className="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-primary transition hover:bg-accent"
+                >
                   View details
-                </button>
+                </Link>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-xl border border-[#C8D7E9]">
-                <div className="grid grid-cols-12 bg-[#F6F9FF] px-4 py-3 text-xs font-semibold text-gray-600">
+              <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+                <div className="grid grid-cols-12 bg-muted/70 px-4 py-3 text-xs font-semibold text-muted-foreground">
                   <div className="col-span-6">Exercise</div>
                   <div className="col-span-4 text-right">Completions</div>
                   <div className="col-span-2 text-right">Change</div>
                 </div>
-                <div className="divide-y divide-[#E6EEF9]">
-                  {topExercises.map((row) => {
-                    const down = row.change.startsWith("-");
+                <div className="divide-y divide-border/70">
+                  {topExercises.slice(0, 5).map((row, idx) => {
+                    const name = row.name ?? row.exerciseName ?? "—";
+                    const completions = row.completions ?? row.count ?? 0;
+                    const change = typeof row.change === "string" ? row.change : null;
+                    const down = (change ?? "").startsWith("-");
+                    const key = row._id ?? row.id ?? `${name}-${idx}`;
                     return (
                       <div
-                        key={row.name}
+                        key={key}
                         className="grid grid-cols-12 items-center px-4 py-3"
                       >
-                        <div className="col-span-6 text-sm font-semibold text-gray-900">
-                          {row.name}
+                        <div className="col-span-6 truncate text-sm font-semibold text-foreground">
+                          {name}
                         </div>
-                        <div className="col-span-4 text-right text-sm font-semibold text-gray-900">
-                          {row.completions.toLocaleString()}
+                        <div className="col-span-4 text-right text-sm font-semibold text-foreground">
+                          {Number(completions).toLocaleString()}
                         </div>
                         <div
                           className={[
                             "col-span-2 text-right text-sm font-semibold",
-                            down ? "text-red-600" : "text-green-700",
+                            change ? (down ? "text-rose-600" : "text-emerald-700") : "text-muted-foreground",
                           ].join(" ")}
                         >
-                          {row.change}
+                          {change ?? "—"}
                         </div>
                       </div>
                     );
@@ -852,9 +975,9 @@ export default function Dashboard() {
 
           {/* Side panels */}
           <div className="lg:col-span-4 grid gap-6">
-            <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-[#0A3161]">Quick Actions</h2>
-              <p className="mt-1 text-xs text-[#2158A3]">
+            <div className="surface-card p-6">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">Quick Actions</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Jump to the most used admin sections.
               </p>
               <div className="mt-4 grid gap-2">
@@ -862,41 +985,43 @@ export default function Dashboard() {
                   <Link
                     key={a.href}
                     href={a.href}
-                    className="flex items-center justify-between rounded-xl border border-[#C8D7E9] bg-[#F6F9FF] px-4 py-3 text-sm font-semibold text-[#0A3161] hover:bg-[#EEF4FF] transition"
+                    className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
                   >
                     <span>{a.label}</span>
-                    <span className="text-[#2158A3]">→</span>
+                    <span className="text-muted-foreground">→</span>
                   </Link>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#C8D7E9] bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-[#0A3161]">Recent Activity</h2>
-              <p className="mt-1 text-xs text-[#2158A3]">Latest events across modules.</p>
+            <div className="surface-card p-6">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">Recent Activity</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Latest events across modules.</p>
               <div className="mt-4 space-y-3">
                 {recentActivity.map((row, idx) => (
                   <div key={idx} className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {row.event}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">{row.meta}</p>
+                      <p className="truncate text-xs text-muted-foreground">{row.meta}</p>
                     </div>
-                    <span className="shrink-0 text-xs font-medium text-gray-500">
+                    <span className="shrink-0 text-xs font-medium text-muted-foreground">
                       {row.time}
                     </span>
                   </div>
                 ))}
               </div>
               <div className="mt-4">
-                <button className="w-full rounded-xl border border-[#C8D7E9] bg-white px-4 py-2.5 text-sm font-semibold text-[#0A3161] hover:bg-[#EEF4FF]">
+                <button className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-accent">
                   View all activity
                 </button>
               </div>
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
