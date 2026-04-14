@@ -13,6 +13,7 @@ export default function EditExercisePage() {
   const router = useRouter();
   const params = useParams();
   const exerciseId = params.id;
+  const submitLockRef = useRef(false);
   
   const [exercise, setExercise] = useState(null);
   const [title, setTitle] = useState("");
@@ -126,19 +127,32 @@ export default function EditExercisePage() {
   };
 
   const handleSave = async () => {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     if (!title || !category) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields", { id: "exercise-edit-required" });
+      window.setTimeout(() => {
+        submitLockRef.current = false;
+      }, 600);
       return;
     }
     const token = localStorage.getItem("token");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
     if (!baseUrl) {
-      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", {
+        id: "exercise-edit-baseurl-missing",
+      });
+      window.setTimeout(() => {
+        submitLockRef.current = false;
+      }, 600);
       return;
     }
     if (!token) {
-      toast.error("Session expired. Please login again.");
+      toast.error("Session expired. Please login again.", { id: "exercise-edit-token-missing" });
+      window.setTimeout(() => {
+        submitLockRef.current = false;
+      }, 600);
       return;
     }
 
@@ -173,6 +187,7 @@ export default function EditExercisePage() {
       toast.error(err?.response?.data?.message || "Failed to update exercise");
     } finally {
       setIsSubmitting(false);
+      if (submitLockRef.current) submitLockRef.current = false;
     }
   };
 

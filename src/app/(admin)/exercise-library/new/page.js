@@ -11,6 +11,7 @@ import { toast } from "react-hot-toast";
 
 export default function NewExercisePage() {
   const router = useRouter();
+  const submitLockRef = useRef(false);
   const [difficulty, setDifficulty] = useState("Beginner");
   const [mediaType, setMediaType] = useState("Video");
   const [mediaFile, setMediaFile] = useState(null);
@@ -306,9 +307,14 @@ export default function NewExercisePage() {
             type="button"
             className="w-full justify-center bg-[#0A3161] hover:bg-[#0D3D7A]"
             onClick={async () => {
+              if (submitLockRef.current) return;
+              submitLockRef.current = true;
               try {
                 if (!title.trim() || !category.trim()) {
-                  toast.error("Please fill Title and Category.");
+                  toast.error("Please fill Title and Category.", { id: "exercise-add-required" });
+                  window.setTimeout(() => {
+                    submitLockRef.current = false;
+                  }, 600);
                   return;
                 }
 
@@ -316,11 +322,19 @@ export default function NewExercisePage() {
                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
                 if (!baseUrl) {
-                  toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+                  toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", {
+                    id: "exercise-add-baseurl-missing",
+                  });
+                  window.setTimeout(() => {
+                    submitLockRef.current = false;
+                  }, 600);
                   return;
                 }
                 if (!token) {
-                  toast.error("Session expired. Please login again.");
+                  toast.error("Session expired. Please login again.", { id: "exercise-add-token-missing" });
+                  window.setTimeout(() => {
+                    submitLockRef.current = false;
+                  }, 600);
                   return;
                 }
 
@@ -377,6 +391,9 @@ export default function NewExercisePage() {
                 toast.error(err?.response?.data?.message || "Failed to add exercise");
               } finally {
                 setIsSubmitting(false);
+                // If we scheduled a delayed unlock (validation), don't override it.
+                // Otherwise unlock immediately after request finishes.
+                if (submitLockRef.current) submitLockRef.current = false;
               }
             }}
             disabled={isSubmitting}

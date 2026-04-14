@@ -33,11 +33,12 @@ export default function NewRecoveryPage() {
     "Yoga",
     "Therapy",
     "Relaxation",
+    "Hydration",
   ];
   const contentTypeOptions = ["Video", "Article", "Audio", "Image"];
 
   const chipClasses = (active) =>
-    `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center transition-all ${
+    `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center whitespace-normal break-words leading-snug transition-all ${
       active
         ? "border-[#0A3161] bg-[#0A3161]/5 text-[#0A3161] shadow-sm"
         : "border-[#C8D7E9] bg-white text-[#2158A3] hover:bg-[#F2F5FA]"
@@ -168,7 +169,7 @@ export default function NewRecoveryPage() {
             <FaRegHeart className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-[#0A3161] leading-6">
+            <h1 className="text-xl font-semibold text-[#0A3161] leading-6 whitespace-normal break-words">
               Add New Recovery Content
             </h1>
             <p className="text-sm text-[#2158A3]">Create a new recovery content item</p>
@@ -315,8 +316,8 @@ export default function NewRecoveryPage() {
             </div>
 
             {mediaFile && (
-              <p className="mt-3 text-xs text-[#2158A3]">
-                Selected: <span className="font-medium">{mediaFile.name}</span>{" "}
+              <p className="mt-3 text-xs text-[#2158A3] whitespace-normal break-words">
+                Selected: <span className="font-medium break-words">{mediaFile.name}</span>{" "}
                 ({(mediaFile.size / (1024 * 1024)).toFixed(1)} MB)
               </p>
             )}

@@ -8,6 +8,7 @@ import { LuUsers, LuApple } from "react-icons/lu";
 import { BiBell, BiComment } from "react-icons/bi";
 import { HiOutlineCog, HiOutlineCreditCard } from "react-icons/hi";
 import { PiLayoutLight } from "react-icons/pi";
+import { HiOutlineClipboardList } from "react-icons/hi";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -79,6 +80,11 @@ export default function Sidebar() {
       href: "/subscription",
       label: "Subscription",
       icon: HiOutlineCreditCard,
+    },
+    {
+      href: "/onboarding",
+      label: "Onboarding",
+      icon: HiOutlineClipboardList,
     },
     // { 
     //   href: "/unity-community", 

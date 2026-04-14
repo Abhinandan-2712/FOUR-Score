@@ -428,9 +428,14 @@ export default function Dashboard() {
     { label: "Exercise Library", href: "/exercise-library" },
     { label: "Nutrition & Macros", href: "/nutrition-macros" },
     { label: "Recovery Content", href: "/recovery-content" },
+    { label: "Fitness Programs", href: "/fitness-programs" },
+    { label: "Notifications", href: "/notification" },
     { label: "Content Management", href: "/content-management" },
     { label: "FAQ", href: "/faq" },
+    { label: "Subscription", href: "/subscription" },
+    { label: "Active Users Today", href: "/active-users-today" },
     { label: "Settings", href: "/settings" },
+    { label: "Onboarding", href: "/onboarding" },
 
   ];
 
@@ -741,7 +746,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-4 grid gap-6">
+              <div className="lg:col-span-4 flex flex-col gap-6">
                 <div className="surface-card p-6">
                   <p className="text-sm font-semibold text-foreground">Quick Actions</p>
                   <div className="mt-4 space-y-2">
@@ -993,7 +998,7 @@ export default function Dashboard() {
           </div>
 
           {/* Side panels */}
-          <div className="lg:col-span-4 grid gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="surface-card overflow-hidden">
               <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
                 <h2 className="text-base font-semibold tracking-tight text-foreground">Quick Actions</h2>
@@ -1002,17 +1007,19 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="p-5">
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                  {quickActions.map((a) => (
-                    <Link
-                      key={a.href}
-                      href={a.href}
-                      className="group flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
-                    >
-                      <span className="truncate">{a.label}</span>
-                      <span className="text-muted-foreground transition group-hover:translate-x-0.5">→</span>
-                    </Link>
-                  ))}
+                <div className="max-h-[320px] overflow-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(15,23,42,0.35)_transparent] dark:[scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-900/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-slate-900/30 dark:hover:[&::-webkit-scrollbar-thumb]:bg-white/30">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    {quickActions.map((a) => (
+                      <Link
+                        key={a.href}
+                        href={a.href}
+                        className="group flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
+                      >
+                        <span className="truncate">{a.label}</span>
+                        <span className="text-muted-foreground transition group-hover:translate-x-0.5">→</span>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1025,7 +1032,7 @@ export default function Dashboard() {
               <div className="p-5">
                 <div className="overflow-hidden rounded-xl border border-border bg-card">
                   <div className="divide-y divide-border/70">
-                    {recentActivity.map((row, idx) => (
+                    {recentActivity.slice(0, 3).map((row, idx) => (
                       <div
                         key={idx}
                         className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/30"
@@ -1043,10 +1050,13 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </div>
-                <div className="mt-4">
-                  <button className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-accent">
-                    View all activity
-                  </button>
+                <div className="mt-4 shrink-0">
+                <Link
+  href="/active-users-today"
+  className="w-full inline-block text-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-accent"
+>
+  View all activity
+</Link>
                 </div>
               </div>
             </div>

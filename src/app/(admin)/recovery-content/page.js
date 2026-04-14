@@ -73,6 +73,8 @@ export default function RecoveryContent() {
         return "bg-rose-100 text-rose-900 border-rose-200";
       case "relaxation":
         return "bg-slate-200 text-slate-800 border-slate-300";
+      case "Hydration":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
