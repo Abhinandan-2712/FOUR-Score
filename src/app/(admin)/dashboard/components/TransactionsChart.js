@@ -3,7 +3,7 @@ import { Bar } from "react-chartjs-2";
 
 export default function TransactionsChart({ data, baseOptions }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow h-72 md:h-96">
+    <div className="surface-card p-6 h-72 md:h-96">
       <Bar
         data={data}
         options={{

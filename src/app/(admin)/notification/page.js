@@ -18,6 +18,7 @@ import { HiOutlineTrash } from "react-icons/hi";
 import { MOCK_NOTIFICATIONS, getAudienceLabel } from "./data";
 import DeleteNotificationModal from "./components/DeleteNotificationModal";
 import ViewNotificationModal from "./components/ViewNotificationModal";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -73,25 +74,25 @@ export default function NotificationPage() {
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal">
-            Notifications
-          </h1>
-          <p className="mt-1 text-sm text-[#2158A3]">
-            <span>Total: {notifications.length}</span>
-            <span className="mx-2">|</span>
-            <span className="text-green-600 font-normal">Sent: {sentCount}</span>
-            <span className="mx-2">|</span>
-            <span className="text-blue-600 font-normal">Scheduled: {scheduledCount}</span>
-            <span className="mx-2">|</span>
-            <span className="text-yellow-600 font-normal">Draft: {draftCount}</span>
+      <AdminHeaderCard
+        title="Notifications"
+        subtitle="Create and manage push notifications sent to users."
+        stats={
+          <p className="text-sm text-muted-foreground">
+            Total: <span className="font-semibold text-foreground">{notifications.length}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Sent:{" "}
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300">{sentCount}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Scheduled:{" "}
+            <span className="font-semibold text-sky-700 dark:text-sky-300">{scheduledCount}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Draft:{" "}
+            <span className="font-semibold text-amber-800 dark:text-amber-300">{draftCount}</span>
           </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push("/notification/new")}>+ New Notification</Button>
-        </div>
-      </div>
+        }
+        actions={<Button onClick={() => router.push("/notification/new")}>+ New Notification</Button>}
+      />
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
         <Input

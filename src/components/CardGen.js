@@ -34,9 +34,12 @@ export default function Card({
         <div className="my-3 h-px w-full bg-border/70" />
         <div className="flex items-center gap-4">
           <div
-            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm
-              ${isIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}
-            `}
+            className={[
+              "flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm",
+              isIncrease
+                ? "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                : "bg-rose-500/15 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200",
+            ].join(" ")}
           >
             {isIncrease ? <IoIosTrendingUp /> : <IoIosTrendingDown />}
             {percentage}%

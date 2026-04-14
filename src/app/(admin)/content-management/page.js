@@ -9,6 +9,7 @@ import { HiOutlineTrash } from "react-icons/hi";
 import { MOCK_CONTENT_ITEMS } from "./data";
 import axios from "axios";
 import { createPortal } from "react-dom";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), {
   ssr: false,
@@ -558,16 +559,11 @@ export default function ContentManagement() {
   return (
     <div className="min-h-[80vh] py-8 px-1">
       <div className="">
-
-        <div className="flex items-center justify-between">
-          <div className="mb-6">
-            <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal">
-              Content Management
-            </h1>
-            <p className="text-sm text-[#2158A3] mt-1">Manage app content and settings</p>
-          </div>
-
-        </div>
+        <AdminHeaderCard
+          title="Content Management"
+          subtitle="Manage app content and settings."
+          className="mb-6"
+        />
 
         {/* Tabs */}
         <div className="inline-flex rounded-lg border border-[#C8D7E9] bg-white p-1 shadow-sm">

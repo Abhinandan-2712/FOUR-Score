@@ -27,6 +27,7 @@ import {
   isAdminApiErrorPayload,
 } from "@/lib/fitnessProgramApi";
 import DeleteProgramModal from "./components/DeleteProgramModal";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -185,30 +186,15 @@ export default function FitnessProgramsPage() {
 
   return (
     <div className="min-h-[80vh] px-1 py-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold leading-6 tracking-tight text-primary">
-            Fitness Programs
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage programs from the API. Reference PDF:{" "}
-            <span className="text-muted-foreground/80">not the member app preview.</span>
-          </p>
-        </div>
-        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {/* <Button
-            type="button"
-            variant="outline"
-            className="border-[#C8D7E9] bg-white text-[#0A3161] w-full sm:w-auto"
-            asChild
-          >
-            <Link href="/fitness-programs/reference">PDF: Logic &amp; catalog</Link>
-          </Button> */}
-          <Button type="button" className="w-full sm:w-auto" onClick={() => router.push("/fitness-programs/new")}>
+      <AdminHeaderCard
+        title="Fitness Programs"
+        subtitle="Manage workout programs used in the app."
+        actions={
+          <Button type="button" onClick={() => router.push("/fitness-programs/new")}>
             + Add Program
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="surface-card mt-6 p-4">
         <Input

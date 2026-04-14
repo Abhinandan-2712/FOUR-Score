@@ -19,6 +19,8 @@ import { LuApple, LuUsers } from "react-icons/lu";
 import { TbActivityHeartbeat } from "react-icons/tb";
 import { LiaDumbbellSolid } from "react-icons/lia";
 import { toast } from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 import StatusDoughnut from "./components/UserDistributionChart";
 import UserGrowthChart from "./components/UserGrowthChart";
 import ActiveUsersWeekChart from "./components/ActiveUsersWeekChart";
@@ -238,48 +240,59 @@ export default function Dashboard() {
   );
 
   const SkeletonCard = () => (
-    <div className="surface-card w-full p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="mt-3 h-8 w-24" />
-        </div>
-        <Skeleton className="h-12 w-12 rounded-2xl" />
+    <div className="surface-card w-full overflow-hidden">
+      <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
+        <Skeleton className="h-4 w-28" />
       </div>
-      <div className="my-4 h-px w-full bg-border/80" />
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-6 w-16 rounded-full" />
-        <Skeleton className="h-4 w-40" />
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <Skeleton className="h-12 w-12 rounded-2xl" />
+        </div>
+        <div className="my-4 h-px w-full bg-border/80" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </div>
     </div>
   );
 
   const SkeletonPanel = ({ title }) => (
-    <div className="surface-card p-6">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-primary">{title}</p>
+    <div className="surface-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
-      <Skeleton className="mt-4 h-44 w-full" />
-      <div className="mt-3 flex gap-2">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-20" />
+      <div className="p-6">
+        <Skeleton className="h-44 w-full" />
+        <div className="mt-3 flex gap-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-20" />
+        </div>
       </div>
     </div>
   );
 
   const SkeletonDoughnut = ({ title }) => (
-    <div className="surface-card h-72 p-6 md:h-96">
-      <p className="text-sm font-semibold text-primary">{title}</p>
-      <div className="mt-6 flex items-center justify-center">
-        <Skeleton className="h-40 w-40 rounded-full" />
+    <div className="surface-card h-72 overflow-hidden md:h-96">
+      <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">Distribution for selected timeframe</p>
       </div>
-      <div className="mt-6 grid grid-cols-2 gap-2">
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-full" />
+      <div className="p-6">
+        <div className="flex items-center justify-center">
+          <Skeleton className="h-40 w-40 rounded-full" />
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-full" />
+        </div>
       </div>
     </div>
   );
@@ -333,7 +346,7 @@ export default function Dashboard() {
       legend: {
         position: "bottom",
         labels: {
-          color: "#374151",
+          color: "hsl(var(--muted-foreground))",
           font: { size: 14, family: "Inter, sans-serif" },
           boxWidth: 20,
           padding: 16,
@@ -341,26 +354,26 @@ export default function Dashboard() {
       },
       title: {
         display: true,
-        color: "#111827",
+        color: "hsl(var(--foreground))",
         font: { size: 18, weight: "600", family: "Inter, sans-serif" },
         padding: { top: 10, bottom: 20 },
       },
       tooltip: {
-        backgroundColor: "#111827",
-        titleColor: "#f9fafb",
-        bodyColor: "#f9fafb",
+        backgroundColor: "hsl(var(--foreground))",
+        titleColor: "hsl(var(--background))",
+        bodyColor: "hsl(var(--background))",
         cornerRadius: 8,
         padding: 12,
       },
     },
     scales: {
       x: {
-        grid: { color: "rgba(156,163,175,0.15)" },
-        ticks: { color: "#4b5563" },
+        grid: { color: "hsl(var(--border) / 0.6)" },
+        ticks: { color: "hsl(var(--muted-foreground))" },
       },
       y: {
-        grid: { color: "rgba(156,163,175,0.15)" },
-        ticks: { color: "#4b5563" },
+        grid: { color: "hsl(var(--border) / 0.6)" },
+        ticks: { color: "hsl(var(--muted-foreground))" },
       },
     },
   };
@@ -655,45 +668,43 @@ export default function Dashboard() {
   return (
     <div className="min-h-[80vh] h-auto">
       <div className="mx-auto w-full py-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Admin overview for users, exercise, and nutrition.
-            </p>
-          </div>
-
-          <div className="surface-card flex flex-wrap items-center gap-2 px-3 py-2 md:justify-end">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Timeframe
-            </span>
-            {timeframeChips.map((chip) => {
-              const active = timeframe === chip.value;
-              return (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => setTimeframe(chip.value)}
-                  className={[
-                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-card text-foreground/80 hover:bg-accent hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {chip.label}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((n) => n + 1)}
-              className="ml-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground/80 transition hover:bg-accent hover:text-foreground"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
+        <AdminHeaderCard
+          title="Dashboard"
+          subtitle="Admin overview for users, exercise, and nutrition."
+          actions={
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
+              <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Timeframe
+              </span>
+              {timeframeChips.map((chip) => {
+                const active = timeframe === chip.value;
+                return (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    onClick={() => setTimeframe(chip.value)}
+                    className={[
+                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : "border-border bg-card text-foreground/80 hover:bg-accent hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRefreshNonce((n) => n + 1)}
+              >
+                Refresh
+              </Button>
+            </div>
+          }
+        />
 
         {shouldShowSkeleton ? (
           <div>
@@ -756,16 +767,14 @@ export default function Dashboard() {
         ) : (
           <>
             {fetchError && !isLoading && !hasLoadedData ? (
-              <div className="mt-6 mx-4 rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
-                <p className="text-sm font-semibold text-rose-700">Couldn’t load dashboard</p>
-                <p className="mt-1 text-sm text-slate-600">{fetchError}</p>
-                <button
-                  type="button"
-                  onClick={() => setRefreshNonce((n) => n + 1)}
-                  className="mt-4 rounded-xl border border-[#C8D7E9] bg-white px-4 py-2 text-sm font-semibold text-[#0A3161] hover:bg-[#EEF4FF]"
-                >
-                  Retry
-                </button>
+              <div className="mt-6 surface-card p-6 border border-rose-500/25 bg-rose-500/5">
+                <p className="text-sm font-semibold text-rose-700 dark:text-rose-200">Couldn’t load dashboard</p>
+                <p className="mt-1 text-sm text-muted-foreground">{fetchError}</p>
+                <div className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => setRefreshNonce((n) => n + 1)}>
+                    Retry
+                  </Button>
+                </div>
               </div>
             ) : null}
         {/* {isDev && rawApiPayload && (
@@ -917,59 +926,67 @@ export default function Dashboard() {
             </div>
 
             {/* Fills the left-side blank space */}
-            <div className="surface-card p-6">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold tracking-tight text-foreground">
-                    Top Exercises
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {timeframeLabelMap[timeframe]} • Highest completions across users
-                  </p>
+            <div className="surface-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold tracking-tight text-foreground">
+                      Top Exercises
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {timeframeLabelMap[timeframe]} • Highest completions across users
+                    </p>
+                  </div>
+                  <Link
+                    href="/exercise-library"
+                    className="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-primary transition hover:bg-accent"
+                  >
+                    View details
+                  </Link>
                 </div>
-                <Link
-                  href="/exercise-library"
-                  className="shrink-0 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-primary transition hover:bg-accent"
-                >
-                  View details
-                </Link>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-                <div className="grid grid-cols-12 bg-muted/70 px-4 py-3 text-xs font-semibold text-muted-foreground">
-                  <div className="col-span-6">Exercise</div>
-                  <div className="col-span-4 text-right">Completions</div>
-                  <div className="col-span-2 text-right">Change</div>
-                </div>
-                <div className="divide-y divide-border/70">
-                  {topExercises.slice(0, 5).map((row, idx) => {
-                    const name = row.name ?? row.exerciseName ?? "—";
-                    const completions = row.completions ?? row.count ?? 0;
-                    const change = typeof row.change === "string" ? row.change : null;
-                    const down = (change ?? "").startsWith("-");
-                    const key = row._id ?? row.id ?? `${name}-${idx}`;
-                    return (
-                      <div
-                        key={key}
-                        className="grid grid-cols-12 items-center px-4 py-3"
-                      >
-                        <div className="col-span-6 truncate text-sm font-semibold text-foreground">
-                          {name}
-                        </div>
-                        <div className="col-span-4 text-right text-sm font-semibold text-foreground">
-                          {Number(completions).toLocaleString()}
-                        </div>
+              <div className="p-5">
+                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="grid grid-cols-12 bg-muted/60 px-4 py-3 text-xs font-semibold text-muted-foreground">
+                    <div className="col-span-6">Exercise</div>
+                    <div className="col-span-4 text-right">Completions</div>
+                    <div className="col-span-2 text-right">Change</div>
+                  </div>
+                  <div className="divide-y divide-border/70">
+                    {topExercises.slice(0, 5).map((row, idx) => {
+                      const name = row.name ?? row.exerciseName ?? "—";
+                      const completions = row.completions ?? row.count ?? 0;
+                      const change = typeof row.change === "string" ? row.change : null;
+                      const down = (change ?? "").startsWith("-");
+                      const key = row._id ?? row.id ?? `${name}-${idx}`;
+                      return (
                         <div
-                          className={[
-                            "col-span-2 text-right text-sm font-semibold",
-                            change ? (down ? "text-rose-600" : "text-emerald-700") : "text-muted-foreground",
-                          ].join(" ")}
+                          key={key}
+                          className="grid grid-cols-12 items-center px-4 py-3 transition-colors hover:bg-muted/30"
                         >
-                          {change ?? "—"}
+                          <div className="col-span-6 truncate text-sm font-semibold text-foreground">
+                            {name}
+                          </div>
+                          <div className="col-span-4 text-right text-sm font-semibold text-foreground">
+                            {Number(completions).toLocaleString()}
+                          </div>
+                          <div
+                            className={[
+                              "col-span-2 text-right text-sm font-semibold",
+                              change
+                                ? down
+                                  ? "text-rose-600 dark:text-rose-300"
+                                  : "text-emerald-700 dark:text-emerald-300"
+                                : "text-muted-foreground",
+                            ].join(" ")}
+                          >
+                            {change ?? "—"}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -977,47 +994,60 @@ export default function Dashboard() {
 
           {/* Side panels */}
           <div className="lg:col-span-4 grid gap-6">
-            <div className="surface-card p-6">
-              <h2 className="text-base font-semibold tracking-tight text-foreground">Quick Actions</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Jump to the most used admin sections.
-              </p>
-              <div className="mt-4 grid gap-2">
-                {quickActions.map((a) => (
-                  <Link
-                    key={a.href}
-                    href={a.href}
-                    className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
-                  >
-                    <span>{a.label}</span>
-                    <span className="text-muted-foreground">→</span>
-                  </Link>
-                ))}
+            <div className="surface-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
+                <h2 className="text-base font-semibold tracking-tight text-foreground">Quick Actions</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Jump to the most used admin sections.
+                </p>
+              </div>
+              <div className="p-5">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                  {quickActions.map((a) => (
+                    <Link
+                      key={a.href}
+                      href={a.href}
+                      className="group flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
+                    >
+                      <span className="truncate">{a.label}</span>
+                      <span className="text-muted-foreground transition group-hover:translate-x-0.5">→</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="surface-card p-6">
-              <h2 className="text-base font-semibold tracking-tight text-foreground">Recent Activity</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Latest events across modules.</p>
-              <div className="mt-4 space-y-3">
-                {recentActivity.map((row, idx) => (
-                  <div key={idx} className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {row.event}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">{row.meta}</p>
-                    </div>
-                    <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                      {row.time}
-                    </span>
-                  </div>
-                ))}
+            <div className="surface-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border bg-gradient-to-r from-emerald-50 via-background to-amber-50/40 dark:from-emerald-950/35 dark:via-background dark:to-amber-950/15">
+                <h2 className="text-base font-semibold tracking-tight text-foreground">Recent Activity</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Latest events across modules.</p>
               </div>
-              <div className="mt-4">
-                <button className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-accent">
-                  View all activity
-                </button>
+              <div className="p-5">
+                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="divide-y divide-border/70">
+                    {recentActivity.map((row, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/30"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {row.event}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">{row.meta}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                          {row.time}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <button className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-accent">
+                    View all activity
+                  </button>
+                </div>
               </div>
             </div>
           </div>

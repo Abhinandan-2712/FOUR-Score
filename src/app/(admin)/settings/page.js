@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HiOutlineCog } from "react-icons/hi";
 import { FaSave } from "react-icons/fa";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const TABS = [
   { id: "general", label: "General" },
@@ -251,15 +252,11 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0A3161] text-white shadow-md">
-          <HiOutlineCog className="h-6 w-6" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6">Settings</h1>
-          <p className="text-sm text-[#2158A3]">Manage application settings and preferences</p>
-        </div>
-      </div>
+      <AdminHeaderCard
+        title="Settings"
+        subtitle="Manage application settings and preferences."
+        className="mb-6"
+      />
 
       {/* Tabs */}
       <div className="inline-flex rounded-lg border border-[#C8D7E9] bg-white p-1 shadow-sm mb-6">

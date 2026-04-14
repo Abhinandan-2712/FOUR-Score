@@ -1,12 +1,12 @@
 "use client";
 
-import {  FaRegFileAlt,FaRegHeart, FaSignOutAlt } from "react-icons/fa";
+import { FaRegFileAlt, FaRegHeart, FaSignOutAlt } from "react-icons/fa";
 import { MdDashboard, MdFitnessCenter } from "react-icons/md";
 import { TbActivityHeartbeat } from "react-icons/tb";
 import { LiaDumbbellSolid } from "react-icons/lia";
 import { LuUsers, LuApple } from "react-icons/lu";      
 import { BiBell, BiComment } from "react-icons/bi";
-import { HiOutlineCog } from "react-icons/hi";
+import { HiOutlineCog, HiOutlineCreditCard } from "react-icons/hi";
 import { PiLayoutLight } from "react-icons/pi";
 import Link from "next/link";
 import Image from "next/image";
@@ -50,11 +50,6 @@ export default function Sidebar() {
       label: "Exercise Library",
       icon: LiaDumbbellSolid,
     },
-    {
-      href: "/fitness-programs",
-      label: "Fitness Programs",
-      icon: MdFitnessCenter,
-    },
     { 
       href: "/nutrition-macros", 
       label: "Nutrition & Macros", 
@@ -66,6 +61,11 @@ export default function Sidebar() {
       icon: FaRegHeart,
     },
     {
+      href: "/fitness-programs",
+      label: "Fitness Programs",
+      icon: MdFitnessCenter,
+    },
+    {
       href: "/notification",
       label: "Notifications",
       icon: BiBell,
@@ -74,6 +74,11 @@ export default function Sidebar() {
       href: "/faq",
       label: "FAQ",
       icon: BiComment,
+    },
+    {
+      href: "/subscription",
+      label: "Subscription",
+      icon: HiOutlineCreditCard,
     },
     // { 
     //   href: "/unity-community", 

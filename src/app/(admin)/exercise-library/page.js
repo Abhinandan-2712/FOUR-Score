@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi";
 import { Button } from "@/components/ui/button";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 import DeleteExerciseModal from "./components/DeleteExerciseModal";
 import ViewExerciseModal from "./components/ViewExerciseModal";
@@ -160,28 +161,22 @@ export default function ExerciseLibrary() {
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
-      <div className="flex items-center justify-between">
-        <div >
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal ">
-            Exercise Library
-          </h1>
-
-          <p className="mt-1 text-sm text-[#2158A3]">
-            <span>Total: {totalExercises}</span>
-            <span className="mx-2">|</span>
-            <span className="text-green-600 font-normal">Active: {activeCount}</span>
-            <span className="mx-2">|</span>
-            <span className="text-red-600 font-normal">Inactive: {inactiveCount}</span>
+      <AdminHeaderCard
+        title="Exercise Library"
+        subtitle="Manage exercises shown in the app library."
+        stats={
+          <p className="text-sm text-muted-foreground">
+            Total: <span className="font-semibold text-foreground">{totalExercises}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Active:{" "}
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300">{activeCount}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Inactive:{" "}
+            <span className="font-semibold text-rose-700 dark:text-rose-300">{inactiveCount}</span>
           </p>
-
-        </div>
-        <div>
-          <Button onClick={() => router.push("/exercise-library/new")}>+ Add new Exercise</Button>
-
-        </div>
-
-
-      </div>
+        }
+        actions={<Button onClick={() => router.push("/exercise-library/new")}>+ Add new Exercise</Button>}
+      />
 
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">

@@ -18,6 +18,7 @@ import { HiOutlineTrash } from "react-icons/hi";
 import DeleteFaqModal from "./components/DeleteFaqModal";
 import ViewFaqModal from "./components/ViewFaqModal";
 import { fetchAllFaqs, deleteFaqById } from "@/lib/faqApi";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -127,23 +128,22 @@ export default function FaqPage() {
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal">
-            FAQ
-          </h1>
-          <p className="mt-1 text-sm text-[#2158A3]">
-            <span>Total: {faqs.length}</span>
-            <span className="mx-2">|</span>
-            <span className="text-green-600 font-normal">Active: {activeCount}</span>
-            <span className="mx-2">|</span>
-            <span className="text-red-600 font-normal">Inactive: {inactiveCount}</span>
+      <AdminHeaderCard
+        title="FAQ"
+        subtitle="Manage frequently asked questions shown in the app."
+        stats={
+          <p className="text-sm text-muted-foreground">
+            Total: <span className="font-semibold text-foreground">{faqs.length}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Active:{" "}
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300">{activeCount}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            Inactive:{" "}
+            <span className="font-semibold text-rose-700 dark:text-rose-300">{inactiveCount}</span>
           </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push("/faq/new")}>+ Add new FAQ</Button>
-        </div>
-      </div>
+        }
+        actions={<Button onClick={() => router.push("/faq/new")}>+ Add new FAQ</Button>}
+      />
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
         <Input

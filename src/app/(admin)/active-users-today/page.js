@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { FaRegEye } from "react-icons/fa";
 import ViewActiveUserModal from "./components/ViewActiveUserModal";
 import { toast } from "react-hot-toast";
+import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
@@ -116,18 +117,19 @@ export default function ActiveUsersToday() {
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[#0A3161] leading-6 tracking-normal">
-            Active Users Today
-          </h1>
-          <p className="mt-1 text-sm text-[#2158A3]">
-            <span>{todayFormatted}</span>
-            <span className="mx-2">|</span>
-            <span className="text-green-600 font-normal">{totalUsers} users active today</span>
+      <AdminHeaderCard
+        title="Active Users Today"
+        subtitle="Users with activity recorded today."
+        stats={
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium">{todayFormatted}</span>
+            <span className="mx-2 text-muted-foreground/60">|</span>
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+              {totalUsers} users active today
+            </span>
           </p>
-        </div>
-      </div>
+        }
+      />
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
         <Input
