@@ -34,6 +34,68 @@ export default function NewExercisePage() {
         : "border-[#C8D7E9] bg-white text-[#2158A3] hover:bg-[#F2F5FA]"
     }`;
 
+  const getMediaConfig = (type) => {
+    switch (type) {
+      case "Image":
+        return {
+          label: "JPG, PNG, WEBP",
+          accept: "image/jpeg,image/png,image/webp",
+          mimeTypes: ["image/jpeg", "image/png", "image/webp"],
+          extensions: [".jpg", ".jpeg", ".png", ".webp"],
+        };
+      case "GIF":
+        return {
+          label: "GIF",
+          accept: "image/gif",
+          mimeTypes: ["image/gif"],
+          extensions: [".gif"],
+        };
+      case "Video":
+      default:
+        return {
+          label: "MP4, MOV",
+          accept: "video/mp4,video/quicktime",
+          mimeTypes: ["video/mp4", "video/quicktime"],
+          extensions: [".mp4", ".mov"],
+        };
+    }
+  };
+
+  const isAllowedFile = (file, cfg) => {
+    const mime = (file?.type || "").toLowerCase();
+    if (mime && cfg.mimeTypes.includes(mime)) return true;
+    const name = (file?.name || "").toLowerCase();
+    return cfg.extensions.some((ext) => name.endsWith(ext));
+  };
+
+  const validateAndSetFile = (file) => {
+    if (!file) return;
+
+    const cfg = getMediaConfig(mediaType);
+    const maxSize = 50 * 1024 * 1024; // 50MB
+
+    if (!isAllowedFile(file, cfg)) {
+      const msg = `Media type is "${mediaType}". Please upload ${cfg.label}.`;
+      setMediaError(msg);
+      toast.error(msg);
+      setMediaFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    if (file.size > maxSize) {
+      const msg = "File size must be less than 50MB.";
+      setMediaError(msg);
+      toast.error(msg);
+      setMediaFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setMediaError("");
+    setMediaFile(file);
+  };
+
   return (
     <div className="min-h-[80vh] py-8 px-1">
       {/* Header */}
@@ -119,7 +181,12 @@ export default function NewExercisePage() {
                 key={opt}
                 type="button"
                 className={chipClasses(mediaType === opt)}
-                onClick={() => setMediaType(opt)}
+                onClick={() => {
+                  setMediaType(opt);
+                  setMediaError("");
+                  setMediaFile(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
               >
                 {opt}
               </button>
@@ -133,30 +200,11 @@ export default function NewExercisePage() {
 
           <input
             type="file"
-            accept="video/mp4,video/quicktime"
+            accept={getMediaConfig(mediaType).accept}
             ref={fileInputRef}
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-
-              const maxSize = 50 * 1024 * 1024; // 50MB
-              const validTypes = ["video/mp4", "video/quicktime"];
-
-              if (!validTypes.includes(file.type)) {
-                setMediaError("Only MP4 or MOV files are allowed.");
-                setMediaFile(null);
-                return;
-              }
-
-              if (file.size > maxSize) {
-                setMediaError("File size must be less than 50MB.");
-                setMediaFile(null);
-                return;
-              }
-
-              setMediaError("");
-              setMediaFile(file);
+              validateAndSetFile(e.target.files?.[0]);
             }}
           />
 
@@ -187,26 +235,7 @@ export default function NewExercisePage() {
               e.preventDefault();
               setIsDragging(false);
 
-              const file = e.dataTransfer.files?.[0];
-              if (!file) return;
-
-              const maxSize = 50 * 1024 * 1024; // 50MB
-              const validTypes = ["video/mp4", "video/quicktime"];
-
-              if (!validTypes.includes(file.type)) {
-                setMediaError("Only MP4 or MOV files are allowed.");
-                setMediaFile(null);
-                return;
-              }
-
-              if (file.size > maxSize) {
-                setMediaError("File size must be less than 50MB.");
-                setMediaFile(null);
-                return;
-              }
-
-              setMediaError("");
-              setMediaFile(file);
+              validateAndSetFile(e.dataTransfer.files?.[0]);
             }}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#0A3161] shadow-sm mb-3">
@@ -215,7 +244,9 @@ export default function NewExercisePage() {
             <p className="text-sm font-medium text-[#0A3161]">
               Click to upload or drag and drop
             </p>
-            <p className="mt-1 text-xs text-[#5671A6]">MP4, MOV (max 50MB)</p>
+            <p className="mt-1 text-xs text-[#5671A6]">
+              {getMediaConfig(mediaType).label} (max 50MB)
+            </p>
           </div>
 
           {mediaFile && (

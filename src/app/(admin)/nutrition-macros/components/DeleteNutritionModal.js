@@ -1,14 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 
 export default function DeleteNutritionModal({ open, nutritionItem, onCancel, onConfirm }) {
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breakfast":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "lunch":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "dinner":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "snack":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onCancel?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onCancel]);
+
+  if (!isMounted) return null;
   if (!open || !nutritionItem) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
@@ -42,12 +71,16 @@ export default function DeleteNutritionModal({ open, nutritionItem, onCancel, on
                 <p className="text-xs font-semibold text-[#0A3161] uppercase tracking-wide">
                   Nutrition Item to be deleted
                 </p>
-                <p className="mt-1.5 text-base font-semibold text-[#0A3161]">
+                <p className="mt-1.5 text-base font-semibold text-[#0A3161] whitespace-normal break-words">
                   {nutritionItem.foodItem}
                 </p>
                 {nutritionItem.category && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 font-medium text-[#0A3161] border border-gray-200">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 font-medium ${categoryBadgeClass(
+                        nutritionItem.category
+                      )}`}
+                    >
                       {nutritionItem.category}
                     </span>
                     {nutritionItem.mealType && (
@@ -110,6 +143,7 @@ export default function DeleteNutritionModal({ open, nutritionItem, onCancel, on
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

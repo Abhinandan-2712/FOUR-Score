@@ -4,9 +4,11 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { FaSave } from "react-icons/fa";
+import { FaRegEdit, FaSave } from "react-icons/fa";
+import { HiOutlineTrash } from "react-icons/hi";
 import { MOCK_CONTENT_ITEMS } from "./data";
 import axios from "axios";
+import { createPortal } from "react-dom";
 
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), {
   ssr: false,
@@ -56,6 +58,7 @@ export default function ContentManagement() {
   const [editorData, setEditorData] = useState("");
   const [termsDocId, setTermsDocId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [socialItems, setSocialItems] = useState([]);
   const [socialSearch, setSocialSearch] = useState("");
   const [socialModalOpen, setSocialModalOpen] = useState(false);
@@ -76,8 +79,35 @@ export default function ContentManagement() {
   const [quoteModalMode, setQuoteModalMode] = useState("add"); // 'add' | 'edit'
   const [quoteDraft, setQuoteDraft] = useState({ id: null, text: "", status: "Active" });
   const [quoteModalError, setQuoteModalError] = useState("");
+  const [quoteDeleteModalOpen, setQuoteDeleteModalOpen] = useState(false);
+  const [quoteDeleteTarget, setQuoteDeleteTarget] = useState(null);
 
   const currentTabMeta = useMemo(() => getTabMeta(activeTab), [activeTab]);
+
+  useEffect(() => setIsMounted(true), []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const anyOpen =
+      (activeTab === "quotes" && quoteModalOpen) ||
+      (activeTab === "quotes" && quoteDeleteModalOpen) ||
+      (activeTab === "social" && socialModalOpen) ||
+      (activeTab === "social" && deleteModalOpen);
+    if (!anyOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+      if (activeTab === "quotes" && quoteModalOpen) setQuoteModalOpen(false);
+      if (activeTab === "quotes" && quoteDeleteModalOpen) {
+        setQuoteDeleteModalOpen(false);
+        setQuoteDeleteTarget(null);
+      }
+      if (activeTab === "social" && socialModalOpen) setSocialModalOpen(false);
+      if (activeTab === "social" && deleteModalOpen) setDeleteModalOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isMounted, activeTab, quoteModalOpen, quoteDeleteModalOpen, socialModalOpen, deleteModalOpen]);
 
   const upsertSocial = async () => {
     const token = localStorage.getItem("token");
@@ -143,6 +173,48 @@ export default function ContentManagement() {
     } catch (err) {
       console.error("Save social media failed:", err?.response?.data || err?.message);
       toast.error(err?.response?.data?.message || "Failed to save social media");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmDeleteQuote = async () => {
+    const item = quoteDeleteTarget;
+    if (!item?._id) return;
+
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      return;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await axios.post(
+        `${baseUrl}/api/admin/delete-quotes/${item._id}`,
+        {},
+        { headers: { token } }
+      );
+      if (!res?.data?.success) {
+        toast.error(res?.data?.message || "Failed to delete quote");
+        return;
+      }
+      toast.success("Quote deleted successfully!");
+      setQuoteDeleteModalOpen(false);
+      setQuoteDeleteTarget(null);
+      const refreshed = await axios.get(`${baseUrl}/api/admin/getAll-quotes`, {
+        headers: { token },
+      });
+      setQuotes(Array.isArray(refreshed?.data?.result) ? refreshed.data.result : []);
+    } catch (err) {
+      console.error("Delete quote failed:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.message || "Failed to delete quote");
     } finally {
       setIsLoading(false);
     }
@@ -332,6 +404,8 @@ export default function ContentManagement() {
       setQuoteModalMode("add");
       setQuoteDraft({ id: null, text: "", status: "Active" });
       setQuoteModalError("");
+      setQuoteDeleteModalOpen(false);
+      setQuoteDeleteTarget(null);
       return;
     }
 
@@ -624,10 +698,12 @@ export default function ContentManagement() {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <div className="inline-flex items-center gap-2">
+                                  <div className="inline-flex items-center justify-end gap-2">
                                     <button
                                       type="button"
-                                      className="text-[11px] rounded-md border border-[#C8D7E9] px-2 py-1 text-[#0A3161] hover:bg-[#F2F5FA]"
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
+                                      aria-label="Edit social link"
+                                      title="Edit"
                                       onClick={() => {
                                         setSocialModalMode("edit");
                                         setSocialDraft({
@@ -640,17 +716,19 @@ export default function ContentManagement() {
                                         setSocialModalOpen(true);
                                       }}
                                     >
-                                      Edit
+                                      <FaRegEdit className="h-4 w-4" />
                                     </button>
                                     <button
                                       type="button"
-                                      className="text-[11px] rounded-md border border-red-200 px-2 py-1 text-red-700 hover:bg-red-50"
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                      aria-label="Delete social link"
+                                      title="Delete"
                                       onClick={() => {
                                         setDeleteTarget(item);
                                         setDeleteModalOpen(true);
                                       }}
                                     >
-                                      Delete
+                                      <HiOutlineTrash className="h-4 w-4" />
                                     </button>
                                   </div>
                                 </TableCell>
@@ -767,10 +845,12 @@ export default function ContentManagement() {
                                 </TableCell>
                                 <TableCell className="text-sm text-[#2158A3]">{created}</TableCell>
                                 <TableCell className="text-right">
-                                  <div className="inline-flex items-center gap-2">
+                                  <div className="inline-flex items-center justify-end gap-2">
                                     <button
                                       type="button"
-                                      className="text-[11px] rounded-md border border-[#C8D7E9] px-2 py-1 text-[#0A3161] hover:bg-[#F2F5FA]"
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
+                                      aria-label="Edit quote"
+                                      title="Edit"
                                       onClick={() => {
                                         setQuoteModalMode("edit");
                                         setQuoteDraft({
@@ -782,59 +862,19 @@ export default function ContentManagement() {
                                         setQuoteModalOpen(true);
                                       }}
                                     >
-                                      Edit
+                                      <FaRegEdit className="h-4 w-4" />
                                     </button>
                                     <button
                                       type="button"
-                                      className="text-[11px] rounded-md border border-red-200 px-2 py-1 text-red-700 hover:bg-red-50"
-                                      onClick={async () => {
-                                        const token = localStorage.getItem("token");
-                                        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-                                        if (!baseUrl) {
-                                          toast.error(
-                                            "API base URL is missing (NEXT_PUBLIC_API_BASE_URL)."
-                                          );
-                                          return;
-                                        }
-                                        if (!token) {
-                                          toast.error("Session expired. Please login again.");
-                                          return;
-                                        }
-                                        try {
-                                          setIsLoading(true);
-                                          const res = await axios.post(
-                                            `${baseUrl}/api/admin/delete-quotes/${item._id}`,
-                                            {},
-                                            { headers: { token } }
-                                          );
-                                          if (!res?.data?.success) {
-                                            toast.error(res?.data?.message || "Failed to delete quote");
-                                            return;
-                                          }
-                                          toast.success("Quote deleted successfully!");
-                                          const refreshed = await axios.get(
-                                            `${baseUrl}/api/admin/getAll-quotes`,
-                                            { headers: { token } }
-                                          );
-                                          setQuotes(
-                                            Array.isArray(refreshed?.data?.result)
-                                              ? refreshed.data.result
-                                              : []
-                                          );
-                                        } catch (err) {
-                                          console.error(
-                                            "Delete quote failed:",
-                                            err?.response?.data || err?.message
-                                          );
-                                          toast.error(
-                                            err?.response?.data?.message || "Failed to delete quote"
-                                          );
-                                        } finally {
-                                          setIsLoading(false);
-                                        }
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                      aria-label="Delete quote"
+                                      title="Delete"
+                                      onClick={() => {
+                                        setQuoteDeleteTarget(item);
+                                        setQuoteDeleteModalOpen(true);
                                       }}
                                     >
-                                      Delete
+                                      <HiOutlineTrash className="h-4 w-4" />
                                     </button>
                                   </div>
                                 </TableCell>
@@ -898,15 +938,16 @@ export default function ContentManagement() {
       </div>
 
       {/* Quotes: Add Modal */}
-      {activeTab === "quotes" && quoteModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setQuoteModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {isMounted && activeTab === "quotes" && quoteModalOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+              onClick={() => setQuoteModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
             <div className="bg-gradient-to-r from-[#0A3161] to-[#0D3D7A] px-6 py-4 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-white font-semibold text-lg">
@@ -1024,19 +1065,22 @@ export default function ContentManagement() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
 
       {/* Social: Add/Edit Modal */}
-      {activeTab === "social" && socialModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setSocialModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {isMounted && activeTab === "social" && socialModalOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+              onClick={() => setSocialModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
             <div className="bg-gradient-to-r from-[#0A3161] to-[#0D3D7A] px-6 py-4 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-white font-semibold text-lg">
@@ -1135,19 +1179,22 @@ export default function ContentManagement() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
 
       {/* Social: Delete Modal */}
-      {activeTab === "social" && deleteModalOpen && deleteTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setDeleteModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {isMounted && activeTab === "social" && deleteModalOpen && deleteTarget
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
             <div className="bg-gradient-to-r from-[#0A3161] to-[#0D3D7A] px-6 py-4 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-white font-semibold text-lg">Delete Social Link</h3>
@@ -1191,8 +1238,77 @@ export default function ContentManagement() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
+
+      {/* Quotes: Delete Modal */}
+      {isMounted && activeTab === "quotes" && quoteDeleteModalOpen && quoteDeleteTarget
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+              onClick={() => {
+                setQuoteDeleteModalOpen(false);
+                setQuoteDeleteTarget(null);
+              }}
+            >
+              <div
+                className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-gradient-to-r from-[#0A3161] to-[#0D3D7A] px-6 py-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-white font-semibold text-lg">Delete Quote</h3>
+                    <p className="text-white/80 text-xs mt-1">This action cannot be undone.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuoteDeleteModalOpen(false);
+                      setQuoteDeleteTarget(null);
+                    }}
+                    className="text-white/80 hover:text-white text-xl leading-none"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="p-6 space-y-3">
+                  <div className="rounded-xl border border-[#C8D7E9] bg-[#F2F5FA] px-4 py-3">
+                    <div className="text-sm font-semibold text-[#0A3161] break-words line-clamp-4 whitespace-pre-wrap">
+                      {quoteDeleteTarget.text || "—"}
+                    </div>
+                  </div>
+                  <div className="text-xs text-[#5671A6]">
+                    Confirm delete to remove this quote from the app.
+                  </div>
+                </div>
+                <div className="bg-gray-50 border-t border-[#C8D7E9] px-6 py-4 flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setQuoteDeleteModalOpen(false);
+                      setQuoteDeleteTarget(null);
+                    }}
+                    className="border-[#C8D7E9] text-[#0A3161]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmDeleteQuote}
+                    disabled={isLoading}
+                    aria-disabled={isLoading}
+                    className="bg-[#0A3161] hover:bg-[#0D3D7A] text-white"
+                  >
+                    {isLoading ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

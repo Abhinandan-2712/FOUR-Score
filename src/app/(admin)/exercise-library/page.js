@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
-import { MdDeleteOutline } from "react-icons/md";
+import { HiOutlineTrash } from "react-icons/hi";
 import { Button } from "@/components/ui/button";
 
 import DeleteExerciseModal from "./components/DeleteExerciseModal";
@@ -51,6 +51,8 @@ export default function ExerciseLibrary() {
   };
 
   const handleDelete = (id) => {
+    // Prevent repeated taps from trying to reopen the same modal.
+    if (deleteTarget) return;
     const exercise = exercises.find((e) => e.id === id);
     setDeleteTarget(exercise || null);
   };
@@ -121,6 +123,7 @@ export default function ExerciseLibrary() {
           headers: { token },
           params,
         });
+        console.log(res?.data);
 
         const result = res?.data?.result ?? {};
         const raw = result.exercises ?? [];
@@ -245,12 +248,22 @@ export default function ExerciseLibrary() {
             ) : paginatedExercises.length > 0 ? (
               paginatedExercises.map((ex, idx) => (
                 <TableRow key={ex.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
-                  <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
-                    {ex.title}
+                  <TableCell className="px-4 py-3 font-medium text-[#0A3161] max-w-[360px]">
+                    <p
+                      className="break-words whitespace-pre-wrap line-clamp-3"
+                      title={ex.title}
+                    >
+                      {ex.title}
+                    </p>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]">
-                      {ex.category}
+                  <TableCell className="px-4 py-3 max-w-[260px]">
+                    <span
+                      className="inline-flex max-w-full items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]"
+                      title={ex.category}
+                    >
+                      <span className="break-words whitespace-pre-wrap line-clamp-3">
+                        {ex.category}
+                      </span>
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3">
@@ -295,7 +308,7 @@ export default function ExerciseLibrary() {
                       <button
                         type="button"
                         onClick={() => handleEdit(ex.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
                         aria-label="Edit exercise"
                       >
                         <FaRegEdit className="h-4 w-4" />
@@ -303,10 +316,15 @@ export default function ExerciseLibrary() {
                       <button
                         type="button"
                         onClick={() => handleDelete(ex.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                        disabled={!!deleteTarget}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                          deleteTarget
+                            ? "bg-red-50/60 text-red-400 cursor-not-allowed"
+                            : "bg-red-50 text-red-600 hover:bg-red-100"
+                        }`}
                         aria-label="Delete exercise"
                       >
-                        <MdDeleteOutline className="h-5 w-5" />
+                        <HiOutlineTrash className="h-4 w-4" />
                       </button>
                     </div>
                   </TableCell>

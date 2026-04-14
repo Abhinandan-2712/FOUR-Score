@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   FaRegEye,
@@ -16,9 +18,37 @@ import {
 export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
   if (!open || !nutritionItem) return null;
 
-  return (
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breakfast":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "lunch":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "dinner":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "snack":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!isMounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -70,7 +100,11 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
                 </label>
               </div>
               <p className="mt-2">
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-[#0A3161] border border-gray-200">
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${categoryBadgeClass(
+                    nutritionItem.category
+                  )}`}
+                >
                   {nutritionItem.category}
                 </span>
               </p>
@@ -146,7 +180,7 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
           {/* Macros Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Calories */}
-            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-700">
                   <FaFire className="h-4 w-4" />
@@ -155,13 +189,14 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
                   Calories
                 </label>
               </div>
-              <p className="mt-2 text-lg font-semibold text-[#0A3161]">
-                {nutritionItem.calories} <span className="text-sm font-normal text-gray-500">kcal</span>
+              <p className="mt-2 text-lg font-semibold text-[#0A3161] whitespace-normal break-words min-w-0">
+                <span className="whitespace-normal break-words">{nutritionItem.calories}</span>{" "}
+                <span className="text-sm font-normal text-gray-500">kcal</span>
               </p>
             </div>
 
             {/* Protein */}
-            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
                   <FaDumbbell className="h-4 w-4" />
@@ -170,13 +205,13 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
                   Protein
                 </label>
               </div>
-              <p className="mt-2 text-lg font-semibold text-[#0A3161]">
+              <p className="mt-2 text-lg font-semibold text-[#0A3161] whitespace-normal break-words min-w-0">
                 {nutritionItem.protein}g
               </p>
             </div>
 
             {/* Carbs */}
-            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-100 text-yellow-700">
                   <FaLeaf className="h-4 w-4" />
@@ -185,13 +220,13 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
                   Carbs
                 </label>
               </div>
-              <p className="mt-2 text-lg font-semibold text-[#0A3161]">
+              <p className="mt-2 text-lg font-semibold text-[#0A3161] whitespace-normal break-words min-w-0">
                 {nutritionItem.carbs}g
               </p>
             </div>
 
             {/* Fats */}
-            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl border border-[#C8D7E9] p-4 shadow-sm hover:shadow-md transition-shadow min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-100 text-pink-700">
                   <FaFire className="h-4 w-4" />
@@ -200,7 +235,7 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
                   Fats
                 </label>
               </div>
-              <p className="mt-2 text-lg font-semibold text-[#0A3161]">
+              <p className="mt-2 text-lg font-semibold text-[#0A3161] whitespace-normal break-words min-w-0">
                 {nutritionItem.fats}g
               </p>
             </div>
@@ -259,6 +294,7 @@ export default function ViewNutritionModal({ open, nutritionItem, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

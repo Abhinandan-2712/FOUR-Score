@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
-import { MdDeleteOutline } from "react-icons/md";
+import { HiOutlineTrash } from "react-icons/hi";
 import DeleteFaqModal from "./components/DeleteFaqModal";
 import ViewFaqModal from "./components/ViewFaqModal";
 import { fetchAllFaqs, deleteFaqById } from "@/lib/faqApi";
@@ -237,7 +237,7 @@ export default function FaqPage() {
                       <button
                         type="button"
                         onClick={() => router.push(`/faq/${faq.id}/edit`)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
                         aria-label="Edit FAQ"
                       >
                         <FaRegEdit className="h-4 w-4" />
@@ -245,10 +245,10 @@ export default function FaqPage() {
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(faq)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         aria-label="Delete FAQ"
                       >
-                        <MdDeleteOutline className="h-5 w-5" />
+                        <HiOutlineTrash className="h-4 w-4" />
                       </button>
                     </div>
                   </TableCell>

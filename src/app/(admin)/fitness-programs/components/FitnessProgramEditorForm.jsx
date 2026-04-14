@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,14 +98,23 @@ export default function FitnessProgramEditorForm({
   const [activeTab, setActiveTab] = useState("overview");
   /** Highest tab index (0–3) the user may open; unlocked by Next */
   const [furthestStep, setFurthestStep] = useState(0);
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
   const currentIdx = tabIndex(activeTab);
+
+  useEffect(() => {
+    // Clear the "advance" latch once the UI has moved.
+    if (isAdvancing) setIsAdvancing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const goToTab = (id) => {
     const idx = tabIndex(id);
     if (idx < 0) return;
     if (wizardMode && idx > furthestStep) {
-      toast.error("Complete the current step and tap “Next” before opening this tab.");
+      toast.error("Complete the current step and tap “Next” before opening this tab.", {
+        id: "fitness-program-wizard-lock",
+      });
       return;
     }
     setActiveTab(id);
@@ -113,13 +122,16 @@ export default function FitnessProgramEditorForm({
 
   const validateCurrentAndGoNext = () => {
     if (!draft) return;
+    if (isAdvancing) return;
+    setIsAdvancing(true);
     const idx = currentIdx;
     let err = null;
     if (idx === 0) err = validateOverviewStep(draft);
     else if (idx === 1) err = validateScheduleStep();
     else if (idx === 2) err = validateWorkoutsStep();
     if (err) {
-      toast.error(err);
+      toast.error(err, { id: "fitness-program-wizard-next-error" });
+      setIsAdvancing(false);
       return;
     }
     if (idx < TAB_IDS.length - 1) {
@@ -517,8 +529,8 @@ export default function FitnessProgramEditorForm({
           )}
 
           {activeTab === "schedule" && (
-            <div className="space-y-4 max-w-[100%]">
-              <p className="text-sm text-[#5671A6] -mt-1 max-w-3xl leading-relaxed">
+            <div className="space-y-4 w-full">
+              <p className="text-sm text-[#5671A6] -mt-1 w-full max-w-none leading-relaxed">
                 <span className="font-medium text-[#2158A3]">Part 1: The 4-week logic grid</span> — PDF: set global
                 rules for what the user sees each day. The app iterates sets/reps by week while keeping exercise lists
                 constant for the block.
@@ -596,7 +608,7 @@ export default function FitnessProgramEditorForm({
 
           {activeTab === "workouts" && (
             <div className="space-y-6 max-w-6xl">
-              <p className="text-sm text-[#5671A6] -mt-1 max-w-3xl leading-relaxed">
+              <p className="text-sm text-[#5671A6] -mt-1 w-full max-w-none leading-relaxed">
                 <span className="font-medium text-[#2158A3]">Part 2: The exercise library</span> — PDF: tag exercises
                 to specific days. Three templates — Workout A (e.g. Monday legs), B (Wednesday upper), C (Friday full
                 body). Use movement tags (Large Muscle, Primary Strength, etc.).
@@ -685,7 +697,7 @@ export default function FitnessProgramEditorForm({
 
           {activeTab === "recovery" && (
             <div className="space-y-4 w-full max-w-6xl">
-              <p className="text-sm text-[#5671A6] -mt-2 mb-2 max-w-3xl leading-relaxed">
+              <p className="text-sm text-[#5671A6] -mt-2 mb-2 w-full max-w-none leading-relaxed">
                 <span className="font-medium text-[#2158A3]">Part 3: Active recovery protocol (Tue / Thu)</span> — PDF:
                 two blocks for recovery days — Block 1 LISS cardio (duration, prompt, options), then Block 2 “Big 4”
                 stretches in order.
@@ -888,7 +900,7 @@ export default function FitnessProgramEditorForm({
               type="button"
               className="bg-[#2158A3] hover:bg-[#1a4682] min-w-[min(100%,220px)] px-5"
               onClick={validateCurrentAndGoNext}
-              disabled={isSaving}
+              disabled={isSaving || isAdvancing}
             >
               {nextButtonText}
             </Button>

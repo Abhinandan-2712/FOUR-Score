@@ -24,6 +24,40 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
   const difficultyOptions = ["Beginner", "Intermediate", "Advanced"];
   const mediaOptions = ["Video", "Image", "GIF"];
 
+  const getMediaConfig = (type) => {
+    switch (type) {
+      case "Image":
+        return {
+          label: "JPG, PNG, WEBP",
+          accept: "image/jpeg,image/png,image/webp",
+          mimeTypes: ["image/jpeg", "image/png", "image/webp"],
+          extensions: [".jpg", ".jpeg", ".png", ".webp"],
+        };
+      case "GIF":
+        return {
+          label: "GIF",
+          accept: "image/gif",
+          mimeTypes: ["image/gif"],
+          extensions: [".gif"],
+        };
+      case "Video":
+      default:
+        return {
+          label: "MP4, MOV",
+          accept: "video/mp4,video/quicktime",
+          mimeTypes: ["video/mp4", "video/quicktime"],
+          extensions: [".mp4", ".mov"],
+        };
+    }
+  };
+
+  const isAllowedFile = (file, cfg) => {
+    const mime = (file?.type || "").toLowerCase();
+    if (mime && cfg.mimeTypes.includes(mime)) return true;
+    const name = (file?.name || "").toLowerCase();
+    return cfg.extensions.some((ext) => name.endsWith(ext));
+  };
+
   useEffect(() => {
     if (exercise) {
       setFormData({
@@ -38,6 +72,13 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
     }
   }, [exercise]);
 
+  useEffect(() => {
+    // Reset file selection when media type changes.
+    setMediaError("");
+    setMediaFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [formData.mediaType]);
+
   const chipClasses = (active) =>
     `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center transition-all ${
       active
@@ -49,17 +90,23 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
     if (!file) return;
 
     const maxSize = 50 * 1024 * 1024; // 50MB
-    const validTypes = ["video/mp4", "video/quicktime"];
+    const cfg = getMediaConfig(formData.mediaType);
 
-    if (!validTypes.includes(file.type)) {
-      setMediaError("Only MP4 or MOV files are allowed.");
+    if (!isAllowedFile(file, cfg)) {
+      const msg = `Media type is "${formData.mediaType}". Please upload ${cfg.label}.`;
+      setMediaError(msg);
+      toast.error(msg);
       setMediaFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     if (file.size > maxSize) {
-      setMediaError("File size must be less than 50MB.");
+      const msg = "File size must be less than 50MB.";
+      setMediaError(msg);
+      toast.error(msg);
       setMediaFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -176,7 +223,7 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
 
             <input
               type="file"
-              accept="video/mp4,video/quicktime"
+              accept={getMediaConfig(formData.mediaType).accept}
               ref={fileInputRef}
               className="hidden"
               onChange={(e) => {
@@ -221,7 +268,9 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
               <p className="text-sm font-medium text-[#0A3161]">
                 Click to upload or drag and drop
               </p>
-              <p className="mt-1 text-xs text-[#5671A6]">MP4, MOV (max 50MB)</p>
+              <p className="mt-1 text-xs text-[#5671A6]">
+                {getMediaConfig(formData.mediaType).label} (max 50MB)
+              </p>
             </div>
 
             {mediaFile && (

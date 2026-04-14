@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const router = useRouter();
+  const inFlightRef = useRef(false);
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -21,18 +22,21 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (inFlightRef.current || loading) return;
 
     if (!email || !password) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all fields", { id: "login-form" });
       return;
     }
 
     if (!validateEmail(email)) {
-      toast.error("Please enter a valid email");
+      toast.error("Please enter a valid email", { id: "login-form" });
       return;
     }
 
+    inFlightRef.current = true;
     setLoading(true);
+    toast.loading("Logging in…", { id: "login" });
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/login`,
@@ -43,16 +47,19 @@ export default function LoginPage() {
         if (keepLoggedIn) {
           // Optional: use a longer-lived storage if you implement it
         }
-        toast.success("Login successful!");
+        toast.success("Login successful!", { id: "login" });
         router.replace("/dashboard");
       } else if (!res?.data?.success && res.data.message === "Password mismatch") {
-        toast.error("Password mismatch");
+        toast.error("Password mismatch", { id: "login" });
+      } else {
+        toast.error(res?.data?.message || "Login failed", { id: "login" });
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      toast.error(err.response?.data?.message || "Login failed");
+      toast.error(err.response?.data?.message || "Login failed", { id: "login" });
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   };
 
@@ -83,6 +90,7 @@ export default function LoginPage() {
               placeholder="name@company.com"
               required
               autoComplete="email"
+              disabled={loading}
               className="h-11 rounded-xl bg-background"
             />
           </div>
@@ -99,11 +107,13 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 required
                 autoComplete="current-password"
+                disabled={loading}
                 className="h-11 rounded-xl bg-background pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -118,6 +128,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={keepLoggedIn}
                 onChange={(e) => setKeepLoggedIn(e.target.checked)}
+                disabled={loading}
                 className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
               />
               <span className="text-sm text-muted-foreground">Keep me logged in</span>
@@ -126,6 +137,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => router.push("/forgot-password")}
+              disabled={loading}
               className="text-sm font-medium text-primary hover:underline"
             >
               Forgot password?

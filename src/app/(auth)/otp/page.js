@@ -162,6 +162,7 @@ import OtpInput from "react-otp-input";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useRef } from "react";
 
 export default function OtpPage() {
   const [otp, setOtp] = useState("");
@@ -169,6 +170,8 @@ export default function OtpPage() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const router = useRouter();
+  const verifyInFlightRef = useRef(false);
+  const resendInFlightRef = useRef(false);
 
   useEffect(() => {
     const storedEmail = sessionStorage.getItem("forgotPasswordEmail");
@@ -182,6 +185,7 @@ export default function OtpPage() {
   // ===== Verify OTP Submit =====
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (verifyInFlightRef.current || loading) return;
     const formData = new FormData(e.target); // will contain hidden email
     formData.append("otp", otp);
 
@@ -191,7 +195,9 @@ export default function OtpPage() {
     }
 
     try {
+      verifyInFlightRef.current = true;
       setLoading(true);
+      toast.loading("Verifying OTP…", { id: "verify-otp" });
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admins/verify-otp`,
         formData,
@@ -200,31 +206,35 @@ export default function OtpPage() {
 
       if (res?.data?.success) {
         toast.success(res.data.message || "OTP verified successfully!", {
-          id: "success",
+          id: "verify-otp",
         });
         sessionStorage.setItem("securityToken", res.data.result.securityToken);
         router.push("/change-password");
       } else {
-        toast.error(res?.data?.message || "Invalid OTP", { id: "invalid-otp" });
+        toast.error(res?.data?.message || "Invalid OTP", { id: "verify-otp" });
       }
     } catch (error) {
       toast.error(
         error.response?.data?.error || "Something went wrong!",
-        { id: "error" }
+        { id: "verify-otp" }
       );
     } finally {
       setLoading(false);
+      verifyInFlightRef.current = false;
     }
   };
 
   // ===== Resend OTP =====
   const handleResendOtp = async () => {
+    if (resendInFlightRef.current || resendLoading) return;
     if (!email) {
       toast.error("Email not found to resend OTP");
       return;
     }
     try {
+      resendInFlightRef.current = true;
       setResendLoading(true);
+      toast.loading("Resending OTP…", { id: "resend-otp" });
       const formData = new FormData();
       formData.append("email", email);
 
@@ -233,19 +243,20 @@ export default function OtpPage() {
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      console.log(res)
 
       if (res?.data?.success) {
-        toast.success(res.data.message || "OTP resent successfully!");
+        toast.success(res.data.message || "OTP resent successfully!", { id: "resend-otp" });
       } else {
-        toast.error(res?.data?.message || "Failed to resend OTP");
+        toast.error(res?.data?.message || "Failed to resend OTP", { id: "resend-otp" });
       }
     } catch (err) {
       toast.error(
-        err.response?.data?.error || "Something went wrong while resending!"
+        err.response?.data?.error || "Something went wrong while resending!",
+        { id: "resend-otp" }
       );
     } finally {
       setResendLoading(false);
+      resendInFlightRef.current = false;
     }
   };
 

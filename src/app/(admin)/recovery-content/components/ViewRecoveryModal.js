@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   FaRegEye,
@@ -14,6 +16,32 @@ import { FaHeadphones } from "react-icons/fa6";
 
 export default function ViewRecoveryModal({ open, recoveryItem, onClose }) {
   if (!open || !recoveryItem) return null;
+
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breathing":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "stretching":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      case "sleep":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "meditation":
+        return "bg-violet-100 text-violet-900 border-violet-200";
+      case "self-massage":
+      case "self massage":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "nutrition":
+        return "bg-orange-100 text-orange-900 border-orange-200";
+      case "yoga":
+        return "bg-teal-100 text-teal-900 border-teal-200";
+      case "therapy":
+        return "bg-rose-100 text-rose-900 border-rose-200";
+      case "relaxation":
+        return "bg-slate-200 text-slate-800 border-slate-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
 
   const getContentTypeIcon = () => {
     switch (recoveryItem.contentType) {
@@ -41,9 +69,22 @@ export default function ViewRecoveryModal({ open, recoveryItem, onClose }) {
     }
   };
 
-  return (
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!isMounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -95,7 +136,11 @@ export default function ViewRecoveryModal({ open, recoveryItem, onClose }) {
                 </label>
               </div>
               <p className="mt-2">
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-[#0A3161] border border-gray-200">
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${categoryBadgeClass(
+                    recoveryItem.category
+                  )}`}
+                >
                   {recoveryItem.category}
                 </span>
               </p>
@@ -205,6 +250,7 @@ export default function ViewRecoveryModal({ open, recoveryItem, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

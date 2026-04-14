@@ -1,15 +1,63 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 
-export default function DeleteRecoveryModal({ open, recoveryItem, onCancel, onConfirm }) {
+export default function DeleteRecoveryModal({
+  open,
+  recoveryItem,
+  isDeleting = false,
+  onCancel,
+  onConfirm,
+}) {
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breathing":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "stretching":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      case "sleep":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "meditation":
+        return "bg-violet-100 text-violet-900 border-violet-200";
+      case "self-massage":
+      case "self massage":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "nutrition":
+        return "bg-orange-100 text-orange-900 border-orange-200";
+      case "yoga":
+        return "bg-teal-100 text-teal-900 border-teal-200";
+      case "therapy":
+        return "bg-rose-100 text-rose-900 border-rose-200";
+      case "relaxation":
+        return "bg-slate-200 text-slate-800 border-slate-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onCancel?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onCancel]);
+
+  if (!isMounted) return null;
   if (!open || !recoveryItem) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
-      onClick={onCancel}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+      onClick={() => {
+        if (!isDeleting) onCancel?.();
+      }}
     >
       <div
         className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-hidden"
@@ -42,12 +90,16 @@ export default function DeleteRecoveryModal({ open, recoveryItem, onCancel, onCo
                 <p className="text-xs font-semibold text-[#0A3161] uppercase tracking-wide">
                   Recovery Content to be deleted
                 </p>
-                <p className="mt-1.5 text-base font-semibold text-[#0A3161]">
+                <p className="mt-1.5 text-base font-semibold text-[#0A3161] whitespace-normal break-words">
                   {recoveryItem.title}
                 </p>
                 {recoveryItem.category && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 font-medium text-[#0A3161] border border-gray-200">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 font-medium ${categoryBadgeClass(
+                        recoveryItem.category
+                      )}`}
+                    >
                       {recoveryItem.category}
                     </span>
                     {recoveryItem.contentType && (
@@ -95,18 +147,21 @@ export default function DeleteRecoveryModal({ open, recoveryItem, onCancel, onCo
               variant="outline"
               onClick={onCancel}
               className="px-5 border-[#C8D7E9] text-[#0A3161] font-medium"
+              disabled={isDeleting}
             >
               Cancel
             </Button>
             <Button
               onClick={onConfirm}
               className="px-5 bg-[#0A3161] hover:bg-[#0D3D7A] text-white font-semibold shadow-sm"
+              disabled={isDeleting}
             >
-              Yes, Delete
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

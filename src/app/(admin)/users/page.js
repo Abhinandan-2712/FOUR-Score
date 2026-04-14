@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FaRegEye } from "react-icons/fa";
-import { MdBlock } from "react-icons/md";
+import { MdBlock, MdLockOpen } from "react-icons/md";
 import { toast } from "react-hot-toast";
 import ViewUserModal from "./components/ViewUserModal";
 import BlockUserModal from "./components/BlockUserModal";
@@ -269,10 +269,20 @@ export default function UserManagementPage() {
                       <button
                         type="button"
                         onClick={() => handleBlock(user.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                        aria-label="Block user"
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                          user.status === "Blocked"
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            : "bg-rose-100 text-rose-700 hover:bg-rose-200",
+                        ].join(" ")}
+                        aria-label={user.status === "Blocked" ? "Unblock user" : "Block user"}
+                        title={user.status === "Blocked" ? "Unblock" : "Block"}
                       >
-                        <MdBlock className="h-4 w-4" />
+                        {user.status === "Blocked" ? (
+                          <MdLockOpen className="h-4 w-4" />
+                        ) : (
+                          <MdBlock className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </TableCell>

@@ -124,12 +124,12 @@ export default function EditRecoveryPage() {
     const descValue = description.trim();
 
     if (!titleValue || !category || !contentType || !descValue) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields", { id: "recovery-edit-required" });
       return;
     }
 
     if (contentType !== "Article" && mediaError) {
-      toast.error(mediaError);
+      toast.error(mediaError, { id: "recovery-edit-media-error" });
       return;
     }
 

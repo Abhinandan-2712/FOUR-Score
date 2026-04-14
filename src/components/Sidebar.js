@@ -105,16 +105,16 @@ export default function Sidebar() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-sidebar bg-gradient-to-b from-sidebar via-sidebar to-[oklch(0.22_0.09_255)] text-sidebar-foreground">
       {/* Logo */}
-      <div className="flex shrink-0 flex-col items-center gap-2 border-b border-sidebar-border/80 px-4 py-5 text-center">
+      <div className="flex shrink-0 flex-col items-center gap-2 border-b border-sidebar-border/80 px-4 py-1 pt-4 text-center">
         <Image
-          src="/logo.jpg"
+          src="/logo.png"
           alt="Medi Admin Logo"
-          width={100}
-          height={40}
-          className="h-14 w-auto rounded-2xl object-contain p-1 ring-1 ring-white/10"
+          width={150}
+          height={60}
+          className="h-20 w-auto rounded-2xl object-contain p-1 "
         />
         <div>
-          <h1 className="text-lg font-bold tracking-tight">FOUR Score</h1>
+          <h1 className="text-lg font-bold tracking-tight">4 Score Fitness</h1>
           {/* <p className="text-xs font-medium text-sidebar-foreground/60">Admin Panel</p> */}
         </div>
       </div>

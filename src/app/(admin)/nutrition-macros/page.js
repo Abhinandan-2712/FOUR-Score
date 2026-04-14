@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
-import { MdDeleteOutline } from "react-icons/md";
+import { HiOutlineTrash } from "react-icons/hi";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 
@@ -53,6 +53,21 @@ export default function NutritionMacros() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
+
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breakfast":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "lunch":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "dinner":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "snack":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
 
   const handleView = (id) => {
     const item = nutritionItems.find((n) => n.id === id);
@@ -213,7 +228,7 @@ export default function NutritionMacros() {
       </div>
 
       <div className="mt-6 w-full overflow-x-auto border border-[#C8D7E9] rounded-lg shadow-md max-h-[500px] overflow-y-auto">
-        <Table className="min-w-[1200px]">
+        <Table className="min-w-[1400px]">
           <TableHeader className="sticky top-0 z-10 bg-[#F2F5FA]">
             <TableRow className="border-b bg-[#F2F5FA]">
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">FOOD ITEM</TableHead>
@@ -221,6 +236,8 @@ export default function NutritionMacros() {
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">MEAL TYPE</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CALORIES</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">PROTEIN (g)</TableHead>
+              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CARBS (g)</TableHead>
+              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">FATS (g)</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">STATUS</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CREATED AT</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">ACTIONS</TableHead>
@@ -229,18 +246,24 @@ export default function NutritionMacros() {
           <TableBody className="bg-white">
             {isFetching ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={10} className="text-center text-gray-500 py-8">
                   Loading nutrition items...
                 </TableCell>
               </TableRow>
             ) : paginatedItems.length > 0 ? (
               paginatedItems.map((item, idx) => (
                 <TableRow key={item.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
-                  <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
-                    {item.foodItem}
+                  <TableCell className="px-4 py-3 font-medium text-[#0A3161] whitespace-normal break-words max-w-[340px]">
+                    <p className="whitespace-normal break-words" title={item.foodItem}>
+                      {item.foodItem}
+                    </p>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${categoryBadgeClass(
+                        item.category
+                      )}`}
+                    >
                       {item.category}
                     </span>
                   </TableCell>
@@ -262,6 +285,12 @@ export default function NutritionMacros() {
                   </TableCell>
                   <TableCell className="px-4 py-3 text-[#2158A3] font-normal text-sm">
                     {item.protein}g
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-[#2158A3] font-normal text-sm">
+                    {item.carbs}g
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-[#2158A3] font-normal text-sm">
+                    {item.fats}g
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <span
@@ -290,7 +319,7 @@ export default function NutritionMacros() {
                       <button
                         type="button"
                         onClick={() => handleEdit(item.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
                         aria-label="Edit nutrition item"
                       >
                         <FaRegEdit className="h-4 w-4" />
@@ -298,10 +327,10 @@ export default function NutritionMacros() {
                       <button
                         type="button"
                         onClick={() => handleDelete(item.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         aria-label="Delete nutrition item"
                       >
-                        <MdDeleteOutline className="h-5 w-5" />
+                        <HiOutlineTrash className="h-4 w-4" />
                       </button>
                     </div>
                   </TableCell>
@@ -309,7 +338,7 @@ export default function NutritionMacros() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={10} className="text-center text-gray-500 py-8">
                   No nutrition items found
                 </TableCell>
               </TableRow>

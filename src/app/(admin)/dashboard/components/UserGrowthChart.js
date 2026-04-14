@@ -10,10 +10,12 @@ export default function UserGrowthChart({
   yStep = 250,
 }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-[#C8D7E9] shadow-md h-72 md:h-96 flex flex-col">
-      <div className="mb-4 flex-shrink-0">
-        <h3 className="text-base font-semibold text-[#0A3161]">{title}</h3>
-        <p className="text-xs text-[#2158A3] mt-1">{subtitle}</p>
+    <div className="surface-card flex h-72 flex-col p-6 md:h-96">
+      <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-semibold tracking-tight text-foreground">{title}</h3>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{subtitle}</p>
+        </div>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <Line
@@ -46,18 +48,18 @@ export default function UserGrowthChart({
               max: yMax,
               ticks: {
                 stepSize: yStep,
-                color: "#4b5563",
+                color: "#64748b",
                 maxTicksLimit: 5,
               },
-              grid: { color: "rgba(156,163,175,0.15)" },
+              grid: { color: "rgba(148,163,184,0.18)" },
             },
             x: {
               ...baseOptions.scales.x,
               grid: { 
                 display: false,
-                color: "rgba(156,163,175,0.15)" 
+                color: "rgba(148,163,184,0.18)" 
               },
-              ticks: { color: "#4b5563" },
+              ticks: { color: "#64748b" },
             },
           },
         }}

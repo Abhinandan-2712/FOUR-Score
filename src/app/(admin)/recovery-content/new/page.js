@@ -102,16 +102,18 @@ export default function NewRecoveryPage() {
     const descValue = description.trim();
 
     if (!titleValue || !category || !contentType || !descValue) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields", { id: "recovery-add-required" });
       return;
     }
 
     if (contentType !== "Article" && !mediaFile) {
-      toast.error(`Please upload a ${contentType.toLowerCase()} file`);
+      toast.error(`Please upload a ${contentType.toLowerCase()} file`, {
+        id: "recovery-add-media-required",
+      });
       return;
     }
     if (mediaError) {
-      toast.error(mediaError);
+      toast.error(mediaError, { id: "recovery-add-media-error" });
       return;
     }
 

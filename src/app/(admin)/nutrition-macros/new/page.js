@@ -30,6 +30,22 @@ export default function NewNutritionPage() {
   const categoryOptions = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const mealTypeOptions = ["Vegetarian", "Non-Vegetarian", "Vegan"];
 
+  const MACRO_LIMITS = {
+    calories: { min: 0, max: 9999, label: "Calories" },
+    grams: { min: 0, max: 999, label: "grams" },
+  };
+
+  const normalizeNumberInput = (raw, { min, max }) => {
+    const s = String(raw ?? "");
+    if (s === "") return "";
+    // Allow only digits (no +/-/e/.)
+    const digits = s.replace(/[^\d]/g, "");
+    if (digits === "") return "";
+    const n = Number(digits);
+    if (Number.isNaN(n)) return "";
+    return String(Math.min(max, Math.max(min, n)));
+  };
+
   const chipClasses = (active) =>
     `flex-1 rounded-xl border text-sm font-medium py-2.5 px-4 text-center transition-all ${
       active
@@ -125,8 +141,13 @@ export default function NewNutritionPage() {
             </label>
             <Input
               type="number"
+              min={MACRO_LIMITS.calories.min}
+              max={MACRO_LIMITS.calories.max}
+              inputMode="numeric"
               value={calories}
-              onChange={(e) => setCalories(e.target.value)}
+              onChange={(e) =>
+                setCalories(normalizeNumberInput(e.target.value, MACRO_LIMITS.calories))
+              }
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
             />
@@ -137,10 +158,13 @@ export default function NewNutritionPage() {
             </label>
             <Input
               type="number"
+              min={MACRO_LIMITS.grams.min}
+              max={MACRO_LIMITS.grams.max}
+              inputMode="numeric"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
               value={protein}
-              onChange={(e) => setProtein(e.target.value)}
+              onChange={(e) => setProtein(normalizeNumberInput(e.target.value, MACRO_LIMITS.grams))}
             />
           </div>
           <div>
@@ -149,10 +173,13 @@ export default function NewNutritionPage() {
             </label>
             <Input
               type="number"
+              min={MACRO_LIMITS.grams.min}
+              max={MACRO_LIMITS.grams.max}
+              inputMode="numeric"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
               value={carbs}
-              onChange={(e) => setCarbs(e.target.value)}
+              onChange={(e) => setCarbs(normalizeNumberInput(e.target.value, MACRO_LIMITS.grams))}
             />
           </div>
           <div>
@@ -161,10 +188,13 @@ export default function NewNutritionPage() {
             </label>
             <Input
               type="number"
+              min={MACRO_LIMITS.grams.min}
+              max={MACRO_LIMITS.grams.max}
+              inputMode="numeric"
               className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
               placeholder="0"
               value={fats}
-              onChange={(e) => setFats(e.target.value)}
+              onChange={(e) => setFats(normalizeNumberInput(e.target.value, MACRO_LIMITS.grams))}
             />
           </div>
         </div>
@@ -339,7 +369,31 @@ export default function NewNutritionPage() {
                   !String(fats).trim() ||
                   !description.trim()
                 ) {
-                  toast.error("Please fill in all required fields.");
+                  toast.error("Please fill in all required fields.", {
+                    id: "nutrition-add-required",
+                  });
+                  return;
+                }
+
+                const c = Number(String(calories).trim());
+                const p = Number(String(protein).trim());
+                const cb = Number(String(carbs).trim());
+                const ft = Number(String(fats).trim());
+                if (
+                  [c, p, cb, ft].some((n) => Number.isNaN(n)) ||
+                  c < MACRO_LIMITS.calories.min ||
+                  c > MACRO_LIMITS.calories.max ||
+                  p < MACRO_LIMITS.grams.min ||
+                  p > MACRO_LIMITS.grams.max ||
+                  cb < MACRO_LIMITS.grams.min ||
+                  cb > MACRO_LIMITS.grams.max ||
+                  ft < MACRO_LIMITS.grams.min ||
+                  ft > MACRO_LIMITS.grams.max
+                ) {
+                  toast.error(
+                    `Macros out of range. Calories: ${MACRO_LIMITS.calories.min}-${MACRO_LIMITS.calories.max}, Protein/Carbs/Fats: ${MACRO_LIMITS.grams.min}-${MACRO_LIMITS.grams.max}.`,
+                    { id: "nutrition-add-macro-range" }
+                  );
                   return;
                 }
 

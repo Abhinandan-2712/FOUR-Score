@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 import { getAudienceLabel } from "../data";
@@ -7,9 +9,22 @@ import { getAudienceLabel } from "../data";
 export default function DeleteNotificationModal({ open, notification, onCancel, onConfirm }) {
   if (!open || !notification) return null;
 
-  return (
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onCancel?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onCancel]);
+
+  if (!isMounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
@@ -80,7 +95,8 @@ export default function DeleteNotificationModal({ open, notification, onCancel, 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

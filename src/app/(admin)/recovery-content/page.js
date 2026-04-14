@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { FaRegEye, FaRegEdit } from "react-icons/fa";
-import { MdDeleteOutline } from "react-icons/md";
+import { HiOutlineTrash } from "react-icons/hi";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 
@@ -49,6 +49,33 @@ export default function RecoveryContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const categoryBadgeClass = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "breathing":
+        return "bg-sky-100 text-sky-800 border-sky-200";
+      case "stretching":
+        return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      case "sleep":
+        return "bg-indigo-100 text-indigo-900 border-indigo-200";
+      case "meditation":
+        return "bg-violet-100 text-violet-900 border-violet-200";
+      case "self-massage":
+      case "self massage":
+        return "bg-amber-100 text-amber-900 border-amber-200";
+      case "nutrition":
+        return "bg-orange-100 text-orange-900 border-orange-200";
+      case "yoga":
+        return "bg-teal-100 text-teal-900 border-teal-200";
+      case "therapy":
+        return "bg-rose-100 text-rose-900 border-rose-200";
+      case "relaxation":
+        return "bg-slate-200 text-slate-800 border-slate-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
 
   const handleView = (id) => {
     const item = recoveryItems.find((r) => r.id === id);
@@ -66,6 +93,8 @@ export default function RecoveryContent() {
   };
 
   const handleDelete = (id) => {
+    // Prevent repeated taps from trying to reopen the same modal.
+    if (deleteTarget) return;
     const item = recoveryItems.find((r) => r.id === id);
     setDeleteTarget(item || null);
   };
@@ -236,11 +265,17 @@ export default function RecoveryContent() {
             ) : paginatedItems.length > 0 ? (
               paginatedItems.map((item, idx) => (
                 <TableRow key={item.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
-                  <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
-                    {item.title}
+                  <TableCell className="px-4 py-3 font-medium text-[#0A3161] whitespace-normal break-words max-w-[420px]">
+                    <p className="whitespace-normal break-words" title={item.title}>
+                      {item.title}
+                    </p>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${categoryBadgeClass(
+                        item.category
+                      )}`}
+                    >
                       {item.category}
                     </span>
                   </TableCell>
@@ -286,7 +321,7 @@ export default function RecoveryContent() {
                       <button
                         type="button"
                         onClick={() => handleEdit(item.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/18"
                         aria-label="Edit recovery content"
                       >
                         <FaRegEdit className="h-4 w-4" />
@@ -294,10 +329,15 @@ export default function RecoveryContent() {
                       <button
                         type="button"
                         onClick={() => handleDelete(item.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                        disabled={!!deleteTarget || isDeleting}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                          deleteTarget || isDeleting
+                            ? "bg-red-50/60 text-red-400 cursor-not-allowed"
+                            : "bg-red-50 text-red-600 hover:bg-red-100"
+                        }`}
                         aria-label="Delete recovery content"
                       >
-                        <MdDeleteOutline className="h-5 w-5" />
+                        <HiOutlineTrash className="h-4 w-4" />
                       </button>
                     </div>
                   </TableCell>
@@ -401,9 +441,13 @@ export default function RecoveryContent() {
       <DeleteRecoveryModal
         open={!!deleteTarget}
         recoveryItem={deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
+        isDeleting={isDeleting}
+        onCancel={() => {
+          if (!isDeleting) setDeleteTarget(null);
+        }}
         onConfirm={async () => {
           if (!deleteTarget) return;
+          if (isDeleting) return;
           const token = localStorage.getItem("token");
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
@@ -417,6 +461,7 @@ export default function RecoveryContent() {
           }
 
           try {
+            setIsDeleting(true);
             const res = await axios.delete(
               `${baseUrl}/api/admin/delete-recovery-content/${deleteTarget.id}`,
               { headers: { token } }
@@ -434,6 +479,8 @@ export default function RecoveryContent() {
           } catch (err) {
             console.error("Delete recovery content failed:", err?.response?.data || err?.message);
             toast.error(err?.response?.data?.message || "Failed to delete recovery content");
+          } finally {
+            setIsDeleting(false);
           }
         }}
       />

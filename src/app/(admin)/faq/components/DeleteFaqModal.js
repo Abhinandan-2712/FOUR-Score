@@ -1,14 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 
 export default function DeleteFaqModal({ open, faq, onCancel, onConfirm, isDeleting }) {
   if (!open || !faq) return null;
 
-  return (
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") !isDeleting && onCancel?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onCancel, isDeleting]);
+
+  if (!isMounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4"
       onClick={() => !isDeleting && onCancel()}
     >
       <div
@@ -76,7 +91,8 @@ export default function DeleteFaqModal({ open, faq, onCancel, onConfirm, isDelet
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

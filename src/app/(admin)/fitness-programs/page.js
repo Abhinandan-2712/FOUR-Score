@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FaRegEdit } from "react-icons/fa";
-import { HiOutlineEye, HiOutlineTrash } from "react-icons/hi";
+import { FaRegEdit, FaRegEye } from "react-icons/fa";
+import { HiOutlineTrash } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import {
   mapProgramFromApi,
@@ -246,7 +246,12 @@ export default function FitnessProgramsPage() {
                   className={idx % 2 === 1 ? "bg-muted/35" : ""}
                 >
                   <TableCell className="max-w-[280px] px-4 py-3">
-                    <p className="font-medium text-primary">{p.title}</p>
+                    <p
+                      className="font-medium text-primary whitespace-normal break-words"
+                      title={p.title}
+                    >
+                      {p.title}
+                    </p>
                     {p.subHeader && (
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground" title={p.subHeader}>
                         {p.subHeader}
@@ -283,11 +288,11 @@ export default function FitnessProgramsPage() {
                           stashProgramForRoute(p);
                           router.push(`/fitness-programs/${p.id}`);
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                         aria-label="View program"
                         title="View"
                       >
-                        <HiOutlineEye className="h-4 w-4" />
+                        <FaRegEye className="h-4 w-4" />
                       </button>
                       <button
                         type="button"

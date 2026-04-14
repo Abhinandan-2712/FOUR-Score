@@ -181,8 +181,10 @@ export default function EditFitnessProgramPage() {
               <MdFitnessCenter className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold text-[#0A3161] leading-6 truncate">{titleLine}</h1>
-              <p className="text-sm text-[#2158A3] truncate">
+              <h1 className="text-xl font-semibold text-[#0A3161] leading-6 whitespace-normal break-words">
+                {titleLine}
+              </h1>
+              <p className="text-sm text-[#2158A3] whitespace-normal break-words">
                 Edit program · <span className="font-mono text-xs text-[#5671A6]">{id}</span>
               </p>
             </div>

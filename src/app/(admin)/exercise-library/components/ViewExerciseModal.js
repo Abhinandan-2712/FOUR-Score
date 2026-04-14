@@ -1,17 +1,36 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaRegEye, FaDumbbell, FaTag, FaChartLine, FaFileVideo, FaCheckCircle, FaTimesCircle, FaCalendarAlt } from "react-icons/fa";
 
 export default function ViewExerciseModal({ open, exercise, onClose }) {
   if (!open || !exercise) return null;
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!isMounted) return null;
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div 
-        className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+    createPortal(
+      <div
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+        onClick={onClose}
       >
+        <div
+          className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0A3161] to-[#0D3D7A] px-6 py-4 rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -153,7 +172,9 @@ export default function ViewExerciseModal({ open, exercise, onClose }) {
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </div>,
+      document.body
+    )
   );
 }
