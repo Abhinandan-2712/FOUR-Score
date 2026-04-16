@@ -22,6 +22,28 @@ import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
+const TYPE_BADGE_STYLES = {
+  general: "bg-slate-100 text-slate-900 border-slate-200",
+  promotion: "bg-amber-100 text-amber-900 border-amber-200",
+  system: "bg-purple-100 text-purple-900 border-purple-200",
+};
+
+function getTypeBadgeClass(type) {
+  const key = (type || "").toString().trim().toLowerCase();
+  return TYPE_BADGE_STYLES[key] ?? "bg-gray-100 text-gray-900 border-gray-200";
+}
+
+const AUDIENCE_BADGE_STYLES = {
+  all: "bg-indigo-100 text-indigo-900 border-indigo-200",
+  active: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  custom: "bg-cyan-100 text-cyan-900 border-cyan-200",
+};
+
+function getAudienceBadgeClass(recipientMode) {
+  const key = (recipientMode || "").toString().trim().toLowerCase();
+  return AUDIENCE_BADGE_STYLES[key] ?? "bg-gray-100 text-gray-900 border-gray-200";
+}
+
 export default function NotificationPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,7 +113,7 @@ export default function NotificationPage() {
             <span className="font-semibold text-amber-800 dark:text-amber-300">{draftCount}</span>
           </p>
         }
-        actions={<Button onClick={() => router.push("/notification/new")}>+ New Notification</Button>}
+        actions={<Button onClick={() => router.push("/notification/new")}>+ Add New Notification</Button>}
       />
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
@@ -159,12 +181,22 @@ export default function NotificationPage() {
                       </p>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]">
+                      <span
+                        className={[
+                          "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border",
+                          getAudienceBadgeClass(item.recipientMode),
+                        ].join(" ")}
+                      >
                         {audienceLabel}
                       </span>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-[#2158A3] border border-[#C8D7E9]">
+                      <span
+                        className={[
+                          "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border",
+                          getTypeBadgeClass(item.type),
+                        ].join(" ")}
+                      >
                         {item.type}
                       </span>
                     </TableCell>

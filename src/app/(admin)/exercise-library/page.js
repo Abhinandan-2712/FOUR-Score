@@ -23,6 +23,33 @@ import ViewExerciseModal from "./components/ViewExerciseModal";
 
 // const DEFAULT_ROWS_PER_PAGE = 6;
 
+const CATEGORY_BADGE_STYLES = {
+  legs: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  chest: "bg-rose-100 text-rose-900 border-rose-200",
+  back: "bg-indigo-100 text-indigo-900 border-indigo-200",
+  shoulders: "bg-amber-100 text-amber-900 border-amber-200",
+  arms: "bg-cyan-100 text-cyan-900 border-cyan-200",
+  glutes: "bg-purple-100 text-purple-900 border-purple-200",
+  core: "bg-lime-100 text-lime-900 border-lime-200",
+  cardio: "bg-orange-100 text-orange-900 border-orange-200",
+};
+
+function getCategoryBadgeClass(category) {
+  const key = (category || "").toString().trim().toLowerCase();
+  return CATEGORY_BADGE_STYLES[key] ?? "bg-gray-100 text-gray-900 border-gray-200";
+}
+
+const MEDIA_TYPE_BADGE_STYLES = {
+  video: "bg-sky-100 text-sky-900 border-sky-200",
+  image: "bg-violet-100 text-violet-900 border-violet-200",
+  gif: "bg-fuchsia-100 text-fuchsia-900 border-fuchsia-200",
+};
+
+function getMediaTypeBadgeClass(mediaType) {
+  const key = (mediaType || "").toString().trim().toLowerCase();
+  return MEDIA_TYPE_BADGE_STYLES[key] ?? "bg-gray-100 text-gray-900 border-gray-200";
+}
+
 export default function ExerciseLibrary() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
@@ -253,7 +280,10 @@ export default function ExerciseLibrary() {
                   </TableCell>
                   <TableCell className="px-4 py-3 max-w-[260px]">
                     <span
-                      className="inline-flex max-w-full items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]"
+                      className={[
+                        "inline-flex max-w-full items-center rounded-full px-3 py-1 text-xs font-medium border",
+                        getCategoryBadgeClass(ex.category),
+                      ].join(" ")}
                       title={ex.category}
                     >
                       <span className="break-words whitespace-pre-wrap line-clamp-3">
@@ -274,8 +304,15 @@ export default function ExerciseLibrary() {
                       {ex.difficulty}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-[#2158A3] font-normal text-sm">
-                    {ex.mediaType}
+                  <TableCell className="px-4 py-3">
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border",
+                        getMediaTypeBadgeClass(ex.mediaType),
+                      ].join(" ")}
+                    >
+                      {ex.mediaType}
+                    </span>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <span

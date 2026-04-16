@@ -423,8 +423,34 @@ export default function SubscriptionAdminPage() {
     return { name, tagline, price, period, features, access, accessItems };
   };
 
+  const isValidPrice = (value) => {
+    const v = String(value ?? "").trim();
+    // Allow: 9, 9.9, 9.99, 1000.00 (no currency symbols / letters)
+    if (!/^\d+(\.\d{1,2})?$/.test(v)) return false;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 && n <= 99999.99;
+  };
+
+  const sanitizePriceInput = (value) => {
+    // Keep digits + one dot, max 2 decimals.
+    let v = String(value ?? "");
+    v = v.replace(/[^\d.]/g, "");
+    const firstDot = v.indexOf(".");
+    if (firstDot !== -1) {
+      v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+      const [a, b = ""] = v.split(".");
+      v = `${a}.${b.slice(0, 2)}`;
+    }
+    // Enforce max value limit
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 99999.99) return "99999.99";
+    return v;
+  };
+
   const validatePlan = ({ name, price, features }) => {
     if (!name || !price) return "Plan name and price are required.";
+    if (String(name).length > 50) return "Plan name must be 50 characters or less.";
+    if (!isValidPrice(price)) return "Enter a valid price (1 - 99999.99, up to 2 decimals).";
     if (!features?.length) return "Add at least one feature.";
     const idBase = makePlanId(name);
     if (!idBase) return "Enter a valid plan name.";
@@ -434,18 +460,18 @@ export default function SubscriptionAdminPage() {
   const handleCreatePlan = () => {
     const parsed = normalizeDraftToPlan(draft);
     const err = validatePlan(parsed);
-    if (err) return toast.error(err);
+    if (err) return toast.error(err, { id: "subscription-create-plan-validation" });
 
     const idBase = makePlanId(parsed.name);
     if (plans.some((p) => p.id === idBase || p.name.toLowerCase() === parsed.name.toLowerCase())) {
-      toast.error("Plan with this name already exists.");
+      toast.error("Plan with this name already exists.", { id: "subscription-create-plan-duplicate" });
       return;
     }
 
     const createdPlan = { id: idBase, ...parsed };
     setPlans((prev) => [...prev, createdPlan]);
     setSelected(createdPlan.id);
-    toast.success(`Plan "${parsed.name}" created.`);
+    toast.success(`Plan "${parsed.name}" created.`, { id: "subscription-create-plan-success" });
     closeModal();
   };
 
@@ -456,11 +482,11 @@ export default function SubscriptionAdminPage() {
 
     const parsed = normalizeDraftToPlan(draft);
     const err = validatePlan(parsed);
-    if (err) return toast.error(err);
+    if (err) return toast.error(err, { id: "subscription-update-plan-validation" });
 
     const nextId = makePlanId(parsed.name);
     if (!nextId) {
-      toast.error("Enter a valid plan name.");
+      toast.error("Enter a valid plan name.", { id: "subscription-update-plan-invalid-name" });
       return;
     }
 
@@ -470,7 +496,7 @@ export default function SubscriptionAdminPage() {
         (p.id === nextId || p.name.toLowerCase() === parsed.name.toLowerCase())
     );
     if (nameClash) {
-      toast.error("Another plan with this name already exists.");
+      toast.error("Another plan with this name already exists.", { id: "subscription-update-plan-duplicate" });
       return;
     }
 
@@ -479,7 +505,7 @@ export default function SubscriptionAdminPage() {
     );
 
     if (selected === existing.id) setSelected(nextId);
-    toast.success(`Plan "${parsed.name}" updated.`);
+    toast.success(`Plan "${parsed.name}" updated.`, { id: "subscription-update-plan-success" });
     closeModal();
   };
 
@@ -487,7 +513,7 @@ export default function SubscriptionAdminPage() {
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
     if (plans.length <= 1) {
-      toast.error("At least one subscription plan must remain.");
+      toast.error("At least one subscription plan must remain.", { id: "subscription-delete-plan-min-one" });
       return;
     }
     setDeleteModal({ open: true, planId });
@@ -504,7 +530,7 @@ export default function SubscriptionAdminPage() {
     if (selected === planId) {
       setSelected(nextPlans[0]?.id || "");
     }
-    toast.success(`Plan "${plan.name}" deleted.`);
+    toast.success(`Plan "${plan.name}" deleted.`, { id: "subscription-delete-plan-success" });
     closeDeleteModal();
   };
 
@@ -516,12 +542,12 @@ export default function SubscriptionAdminPage() {
         stats={
           <p className="text-sm text-muted-foreground">
             Total plans: <span className="font-semibold text-foreground">{totalPlans}</span>
-            {selectedPlan ? (
+            {/* {selectedPlan ? (
               <>
                 <span className="mx-2 text-muted-foreground/60">|</span>
                 Active: <span className="font-semibold text-foreground">{selectedPlan.name}</span>
               </>
-            ) : null}
+            ) : null} */}
           </p>
         }
         actions={
@@ -765,20 +791,29 @@ export default function SubscriptionAdminPage() {
                     <div className="p-5 md:p-6 space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className={labelCls}>Plan name</label>
+                        <label className={labelCls}>
+                          Plan name <span className="text-red-500">*</span>
+                        </label>
                         <Input
                           value={draft.name}
                           onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
                           placeholder="e.g. Elite"
+                          maxLength={50}
                           className="mt-1.5"
                         />
                       </div>
                       <div>
-                        <label className={labelCls}>Price</label>
+                        <label className={labelCls}>
+                          Price <span className="text-red-500">*</span>
+                        </label>
                         <Input
                           value={draft.price}
-                          onChange={(e) => setDraft((p) => ({ ...p, price: e.target.value }))}
-                          placeholder="e.g. $39.99"
+                          onChange={(e) =>
+                            setDraft((p) => ({ ...p, price: sanitizePriceInput(e.target.value) }))
+                          }
+                          inputMode="decimal"
+                          maxLength={9}
+                          placeholder="e.g. 39.99"
                           className="mt-1.5"
                         />
                       </div>
@@ -803,7 +838,9 @@ export default function SubscriptionAdminPage() {
                     </div>
 
                     <div>
-                      <label className={labelCls}>Features (one per line)</label>
+                      <label className={labelCls}>
+                        Features (one per line) <span className="text-red-500">*</span>
+                      </label>
                       <Textarea
                         value={draft.featuresText}
                         onChange={(e) => setDraft((p) => ({ ...p, featuresText: e.target.value }))}

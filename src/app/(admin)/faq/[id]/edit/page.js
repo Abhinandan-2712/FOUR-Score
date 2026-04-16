@@ -4,11 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { BiComment } from "react-icons/bi";
 import { fetchFaqById, updateFaq } from "@/lib/faqApi";
 import { Textarea } from "@/components/ui/textarea";
+
+function truncateForToast(text, max = 60) {
+  const t = (text || "").toString().trim();
+  if (!t) return "";
+  if (t.length <= max) return t;
+  return `${t.slice(0, Math.max(0, max - 1))}…`;
+}
 
 export default function EditFaqPage() {
   const router = useRouter();
@@ -83,17 +89,17 @@ export default function EditFaqPage() {
 
   const handleSave = async () => {
     if (!question.trim() || !answer.trim()) {
-      toast.error("Please fill in question and answer");
+      toast.error("Please fill in question and answer", { id: "faq-required-fields" });
       return;
     }
     const token = localStorage.getItem("token");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
     if (!baseUrl) {
-      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", { id: "faq-missing-base-url" });
       return;
     }
     if (!token) {
-      toast.error("Session expired. Please login again.");
+      toast.error("Session expired. Please login again.", { id: "faq-missing-token" });
       return;
     }
     setIsSaving(true);
@@ -103,7 +109,8 @@ export default function EditFaqPage() {
         { question: question.trim(), category, status, answer },
         { token, baseUrl }
       );
-      toast.success(`FAQ "${question}" updated successfully!`);
+      const shortQ = truncateForToast(question, 60);
+      toast.success(shortQ ? `FAQ "${shortQ}" updated successfully!` : "FAQ updated successfully!");
       router.push("/faq");
     } catch (err) {
       console.error("Update FAQ failed:", err?.adminPayload || err?.message);
@@ -157,11 +164,11 @@ export default function EditFaqPage() {
           <label className="text-sm font-medium text-[#0A3161]">
             Question <span className="text-red-500">*</span>
           </label>
-          <Input
-            className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
+          <Textarea
             placeholder="Enter question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            className="mt-1.5 min-h-[48px] w-full rounded-lg border border-[#C8D7E9] bg-white px-4 py-3 text-sm text-[#0A3161] shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30 resize-y whitespace-pre-wrap break-words"
           />
         </div>
 

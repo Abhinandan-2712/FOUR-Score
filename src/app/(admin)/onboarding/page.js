@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
@@ -272,6 +272,10 @@ export default function AdminOnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const deleteStepLockRef = useRef(false);
+  const clearDraftLockRef = useRef(false);
+  const resetLockRef = useRef(false);
+  const saveLockRef = useRef(false);
   const [flow, setFlow] = useState(() => normalizeFlow(defaultFlowFromPdf()));
   const [selectedStepId, setSelectedStepId] = useState(flow.steps?.[0]?.id ?? null);
 
@@ -456,32 +460,50 @@ export default function AdminOnboardingPage() {
   };
 
   const resetToDefault = () => {
+    if (resetLockRef.current) return;
+    resetLockRef.current = true;
+    window.setTimeout(() => {
+      resetLockRef.current = false;
+    }, 400);
+
     const next = normalizeFlow(defaultFlowFromPdf());
     setFlow(next);
     setSelectedStepId(next.steps?.[0]?.id ?? null);
     persistDraft(next);
-    toast.success("Reset to default onboarding flow.");
+    toast.success("Reset to default onboarding flow.", { id: "onboarding-reset-success" });
   };
 
   const clearDraftOnly = () => {
+    if (clearDraftLockRef.current) return;
+    clearDraftLockRef.current = true;
+    window.setTimeout(() => {
+      clearDraftLockRef.current = false;
+    }, 400);
+
     try {
       localStorage.removeItem(DRAFT_KEY);
-      toast.success("Local draft cleared.");
+      toast.success("Local draft cleared.", { id: "onboarding-clear-draft-success" });
     } catch {
-      toast.error("Could not clear local draft.");
+      toast.error("Could not clear local draft.", { id: "onboarding-clear-draft-failed" });
     }
   };
 
   const onSave = async () => {
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
+    window.setTimeout(() => {
+      saveLockRef.current = false;
+    }, 400);
+
     const next = normalizeFlow(flow);
     persistDraft(next);
     setIsSaving(true);
     try {
       await saveToApi(next);
-      toast.success("Onboarding flow saved.");
+      toast.success("Onboarding flow saved.", { id: "onboarding-save-success" });
     } catch (e) {
       console.error("Save onboarding failed:", e?.response?.data || e?.message);
-      toast.error(e?.response?.data?.message || e?.message || "Save failed");
+      toast.error(e?.response?.data?.message || e?.message || "Save failed", { id: "onboarding-save-failed" });
     } finally {
       setIsSaving(false);
     }
@@ -701,12 +723,18 @@ export default function AdminOnboardingPage() {
                   <Button
                     variant="destructive"
                     onClick={() => {
+                      if (deleteStepLockRef.current) return;
+                      deleteStepLockRef.current = true;
+                      window.setTimeout(() => {
+                        deleteStepLockRef.current = false;
+                      }, 400);
+
                       if (flow.steps.length <= 1) {
-                        toast.error("You must keep at least 1 step.");
+                        toast.error("You must keep at least 1 step.", { id: "onboarding-delete-step-min-one" });
                         return;
                       }
                       deleteStep(selectedStep.id);
-                      toast.success("Step deleted.");
+                      toast.success("Step deleted.", { id: "onboarding-delete-step-success" });
                     }}
                   >
                     <HiOutlineTrash className="mr-2 h-4 w-4" />

@@ -22,10 +22,35 @@ import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
+function stripHtmlToText(input) {
+  if (input == null) return "";
+  return String(input)
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const CATEGORY_BADGE_STYLES = {
+  general: "bg-slate-100 text-slate-900 border-slate-200",
+  account: "bg-indigo-100 text-indigo-900 border-indigo-200",
+  subscription: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  workout: "bg-orange-100 text-orange-900 border-orange-200",
+  nutrition: "bg-lime-100 text-lime-900 border-lime-200",
+  recovery: "bg-purple-100 text-purple-900 border-purple-200",
+};
+
+function getCategoryBadgeClass(category) {
+  const key = (category || "").toString().trim().toLowerCase();
+  return CATEGORY_BADGE_STYLES[key] ?? "bg-gray-100 text-gray-900 border-gray-200";
+}
+
 export default function FaqPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // all | active | inactive
+  const [categoryFilter, setCategoryFilter] = useState("all"); // all | <category>
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
   const [faqs, setFaqs] = useState([]);
@@ -74,12 +99,23 @@ export default function FaqPage() {
     });
     if (statusFilter === "active") list = list.filter((f) => f.status === "Active");
     if (statusFilter === "inactive") list = list.filter((f) => f.status === "Inactive");
+    if (categoryFilter !== "all")
+      list = list.filter((f) => (f.category || "").toLowerCase() === categoryFilter);
     return list;
-  }, [faqs, searchTerm, statusFilter]);
+  }, [faqs, searchTerm, statusFilter, categoryFilter]);
 
   const totalFaqs = filteredFaqs.length;
   const activeCount = faqs.filter((f) => f.status === "Active").length;
   const inactiveCount = faqs.filter((f) => f.status === "Inactive").length;
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    for (const f of faqs) {
+      const c = (f.category || "").toString().trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [faqs]);
 
   const totalPages = Math.max(1, Math.ceil(totalFaqs / rowsPerPage));
   const start = (currentPage - 1) * rowsPerPage;
@@ -156,7 +192,7 @@ export default function FaqPage() {
           className="w-full border-[#C8D7E9] rounded-md"
         />
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {[
             { key: "all", label: `All (${faqs.length})` },
             { key: "active", label: `Active (${activeCount})` },
@@ -178,14 +214,34 @@ export default function FaqPage() {
               {label}
             </button>
           ))}
+
+          <div className="flex items-center gap-2 md:ml-auto">
+            <span className="text-sm font-medium text-[#0A3161]">Category:</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 rounded-md border border-[#C8D7E9] bg-white px-3 text-sm text-[#0A3161] outline-none focus:ring-2 focus:ring-[#0A3161]/30"
+            >
+              <option value="all">All</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c.toLowerCase()}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       <div className="mt-6 w-full overflow-x-auto border border-[#C8D7E9] rounded-lg shadow-md max-h-[500px] overflow-y-auto">
-        <Table className="min-w-[1000px]">
+        <Table className="min-w-[1200px]">
           <TableHeader className="sticky top-0 z-10 bg-[#F2F5FA]">
             <TableRow className="border-b bg-[#F2F5FA]">
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">QUESTION</TableHead>
+              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">ANSWER</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CATEGORY</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">STATUS</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CREATED AT</TableHead>
@@ -195,18 +251,30 @@ export default function FaqPage() {
           <TableBody className="bg-white">
             {isFetching ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-[#5671A6] py-10">
+                <TableCell colSpan={6} className="text-center text-[#5671A6] py-10">
                   Loading FAQs…
                 </TableCell>
               </TableRow>
             ) : paginatedFaqs.length > 0 ? (
               paginatedFaqs.map((faq, idx) => (
                 <TableRow key={faq.id} className={idx % 2 === 1 ? "bg-gray-50/50" : ""}>
-                  <TableCell className="px-4 py-3 font-medium text-[#0A3161]">
-                    {faq.question}
+                  <TableCell className="px-4 py-3 font-medium text-[#0A3161] max-w-[240px] align-top">
+                    <div className="fs-line-clamp-3" title={faq.question}>
+                      {faq.question}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-[#2158A3] font-normal text-sm max-w-[240px] align-top">
+                    <div className="fs-line-clamp-3" title={stripHtmlToText(faq.answer)}>
+                      {stripHtmlToText(faq.answer) || "—"}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-[#0A3161]">
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border",
+                        getCategoryBadgeClass(faq.category),
+                      ].join(" ")}
+                    >
                       {faq.category}
                     </span>
                   </TableCell>
@@ -256,7 +324,7 @@ export default function FaqPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                   No FAQs found
                 </TableCell>
               </TableRow>

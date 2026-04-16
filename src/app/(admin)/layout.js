@@ -1,6 +1,7 @@
 // AdminLayout.jsx
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
 
 // export default function AdminLayout({ children }) {
 //   return (
@@ -30,6 +31,7 @@ import Navbar from "@/components/Navbar";
 export default function AdminLayout({ children }) {
   return (
     <div className="admin-shell text-foreground">
+      <ScrollToTopOnRouteChange />
       {/* Sidebar */}
       <aside className="hidden sm:block fixed top-0 left-0 z-50 h-screen w-64 overflow-hidden rounded-r-2xl border-r border-sidebar-border bg-sidebar shadow-[var(--shadow-premium)]">
         <Sidebar />

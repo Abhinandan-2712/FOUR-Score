@@ -14,7 +14,14 @@ import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), {
   ssr: false,
   loading: () => (
-    <div className="min-h-[360px] p-4 text-sm text-[#2158A3]">Loading editor…</div>
+    <div className="min-h-[360px] flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl space-y-3">
+        <div className="mx-auto h-5 w-40 animate-pulse rounded-lg bg-slate-200" />
+        <div className="h-10 w-full animate-pulse rounded-xl bg-slate-200/80" />
+        <div className="h-10 w-11/12 animate-pulse rounded-xl bg-slate-200/70" />
+        <div className="h-10 w-10/12 animate-pulse rounded-xl bg-slate-200/60" />
+      </div>
+    </div>
   ),
 });
 import {
@@ -50,6 +57,18 @@ function getTabMeta(tabId) {
     default:
       return { contentType: "Custom", title: "Content" };
   }
+}
+
+function isRichTextEmpty(value) {
+  const html = String(value ?? "");
+  const text = html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length === 0;
 }
 
 export default function ContentManagement() {
@@ -430,12 +449,23 @@ export default function ContentManagement() {
         const token = localStorage.getItem("token");
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
+        if (isRichTextEmpty(editorData)) {
+          toast.error(`Please enter ${isPrivacy ? "privacy policy" : "about app"} content.`, {
+            id: `content-mgmt-empty:${activeTab}`,
+          });
+          return;
+        }
+
         if (!baseUrl) {
-          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", {
+            id: "content-mgmt-missing-base-url",
+          });
           return;
         }
         if (!token) {
-          toast.error("Session expired. Please login again.");
+          toast.error("Session expired. Please login again.", {
+            id: "content-mgmt-missing-token",
+          });
           return;
         }
 
@@ -449,11 +479,15 @@ export default function ContentManagement() {
           });
 
           if (res?.data?.success) {
-            toast.success(`${isPrivacy ? "Privacy Policy" : "About App"} saved successfully!`);
+            toast.success(`${isPrivacy ? "Privacy Policy" : "About App"} saved successfully!`, {
+              id: `content-mgmt-saved:${activeTab}`,
+            });
           } else {
             toast.error(
               res?.data?.message ||
                 `Failed to save ${isPrivacy ? "privacy policy" : "about app"}`
+              ,
+              { id: `content-mgmt-save-failed:${activeTab}` }
             );
           }
         } catch (err) {
@@ -464,6 +498,8 @@ export default function ContentManagement() {
           toast.error(
             err?.response?.data?.message ||
               `Failed to save ${isPrivacy ? "privacy policy" : "about app"}`
+            ,
+            { id: `content-mgmt-save-failed:${activeTab}` }
           );
         } finally {
           setIsLoading(false);
@@ -479,12 +515,23 @@ export default function ContentManagement() {
         const token = localStorage.getItem("token");
         const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
+        if (isRichTextEmpty(editorData)) {
+          toast.error("Please enter terms & conditions content.", {
+            id: "content-mgmt-empty:terms",
+          });
+          return;
+        }
+
         if (!baseUrl) {
-          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).");
+          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", {
+            id: "content-mgmt-missing-base-url",
+          });
           return;
         }
         if (!token) {
-          toast.error("Session expired. Please login again.");
+          toast.error("Session expired. Please login again.", {
+            id: "content-mgmt-missing-token",
+          });
           return;
         }
 
@@ -502,7 +549,7 @@ export default function ContentManagement() {
           });
 
           if (res?.data?.success) {
-            toast.success("Terms & Conditions saved successfully!");
+            toast.success("Terms & Conditions saved successfully!", { id: "content-mgmt-saved:terms" });
             const idFromRes =
               res?.data?.result?._id ??
               res?.data?.result?.id ??
@@ -511,11 +558,15 @@ export default function ContentManagement() {
               null;
             if (idFromRes) setTermsDocId(String(idFromRes));
           } else {
-            toast.error(res?.data?.message || "Failed to save terms & conditions");
+            toast.error(res?.data?.message || "Failed to save terms & conditions", {
+              id: "content-mgmt-save-failed:terms",
+            });
           }
         } catch (err) {
           console.error("Save terms & conditions failed:", err?.response?.data || err?.message);
-          toast.error(err?.response?.data?.message || "Failed to save terms & conditions");
+          toast.error(err?.response?.data?.message || "Failed to save terms & conditions", {
+            id: "content-mgmt-save-failed:terms",
+          });
         } finally {
           setIsLoading(false);
         }
@@ -555,6 +606,43 @@ export default function ContentManagement() {
 
     toast.success(`${currentTabMeta.title} saved successfully!`);
   };
+
+  const SkeletonBlock = ({ className }) => (
+    <div className={`animate-pulse rounded-lg bg-slate-200/80 ${className || ""}`} />
+  );
+
+  const CenteredLoader = ({ label = "Loading..." }) => (
+    <div className="min-h-[220px] flex items-center justify-center p-6">
+      <div className="flex items-center gap-3 text-sm font-medium text-[#2158A3]">
+        <span className="h-4 w-4 rounded-full border-2 border-[#0A3161]/30 border-t-[#0A3161] animate-spin" />
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+
+  const TableSkeleton = ({ cols = 4, rows = 6 }) => (
+    <div className="p-5">
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px] rounded-xl border border-[#C8D7E9] bg-white">
+          <div className="grid grid-cols-12 gap-3 border-b border-[#C8D7E9] bg-[#F2F5FA] px-4 py-3">
+            {Array.from({ length: cols }).map((_, i) => (
+              <SkeletonBlock key={i} className="col-span-3 h-4" />
+            ))}
+          </div>
+          <div className="divide-y divide-border/70">
+            {Array.from({ length: rows }).map((_, r) => (
+              <div key={r} className="grid grid-cols-12 gap-3 px-4 py-3">
+                <SkeletonBlock className="col-span-5 h-4" />
+                <SkeletonBlock className="col-span-3 h-4" />
+                <SkeletonBlock className="col-span-2 h-4" />
+                <SkeletonBlock className="col-span-2 h-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
@@ -630,7 +718,7 @@ export default function ContentManagement() {
                 </div>
 
                 {isLoading ? (
-                  <div className="p-4 text-sm text-[#2158A3]">Loading...</div>
+                  <TableSkeleton cols={4} rows={6} />
                 ) : (() => {
                   const q = socialSearch.trim().toLowerCase();
                   const filtered = q
@@ -642,7 +730,7 @@ export default function ContentManagement() {
 
                   if (filtered.length === 0) {
                     return (
-                      <div className="p-6">
+                      <div className="p-6 text-center">
                         <div className="text-sm font-medium text-[#0A3161]">
                           {socialItems.length === 0 ? "No links added yet" : "No results found"}
                         </div>
@@ -777,7 +865,7 @@ export default function ContentManagement() {
                 </div>
 
                 {isLoading ? (
-                  <div className="p-4 text-sm text-[#2158A3]">Loading...</div>
+                  <TableSkeleton cols={4} rows={6} />
                 ) : (() => {
                   const q = quoteSearch.trim().toLowerCase();
                   const filtered = q
@@ -786,7 +874,7 @@ export default function ContentManagement() {
 
                   if (filtered.length === 0) {
                     return (
-                      <div className="p-6">
+                      <div className="p-6 text-center">
                         <div className="text-sm font-medium text-[#0A3161]">
                           {quotes.length === 0 ? "No quotes added yet" : "No results found"}
                         </div>
@@ -887,7 +975,7 @@ export default function ContentManagement() {
           ) : (
             <div className="border border-[#C8D7E9] rounded-lg overflow-hidden [&_.ck-editor__editable]:min-h-[360px] [&_.ck-editor__editable]:p-4 [&_.ck-toolbar]:border-t-0 [&_.ck-toolbar]:border-l-0 [&_.ck-toolbar]:border-r-0 [&_.ck-toolbar]:border-b [&_.ck-toolbar]:border-gray-200">
               {isLoading ? (
-                <div className="min-h-[360px] p-4 text-sm text-[#2158A3]">Loading...</div>
+                <CenteredLoader label="Loading content…" />
               ) : (
                 <RichTextEditor
                   key={activeTab}

@@ -20,7 +20,9 @@ export default function AdminHeaderCard({
             ) : null}
             {stats ? <div className="mt-2">{stats}</div> : null}
           </div>
-          {actions ? <div className="shrink-0">{actions}</div> : null}
+          {actions ? (
+            <div className="shrink-0 flex justify-end md:block">{actions}</div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FaRegFileAlt, FaRegHeart, FaSignOutAlt } from "react-icons/fa";
+import { FaRegCommentDots, FaRegFileAlt, FaRegHeart, FaSignOutAlt } from "react-icons/fa";
 import { MdDashboard, MdFitnessCenter } from "react-icons/md";
 import { TbActivityHeartbeat } from "react-icons/tb";
 import { LiaDumbbellSolid } from "react-icons/lia";
@@ -70,6 +70,11 @@ export default function Sidebar() {
       href: "/notification",
       label: "Notifications",
       icon: BiBell,
+    },
+    {
+      href: "/feedback",
+      label: "Feedback",
+      icon: FaRegCommentDots,
     },
     {
       href: "/faq",

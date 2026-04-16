@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,7 @@ import { Input } from "@/components/ui/input";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { BiBell } from "react-icons/bi";
 import { HiOutlineSearch } from "react-icons/hi";
-
-const MOCK_USERS = [
-  { id: 1, name: "John Smith", email: "john@example.com", goal: "Weight Loss", status: "Active" },
-  { id: 2, name: "Sarah Johnson", email: "sarah@example.com", goal: "Muscle Gain", status: "Active" },
-  { id: 3, name: "Emily Davis", email: "emily@example.com", goal: "Weight Loss", status: "Active" },
-  { id: 4, name: "Jessica Lee", email: "jessica@example.com", goal: "Stay Fit", status: "Active" },
-  { id: 5, name: "David Martinez", email: "david@example.com", goal: "   Loss", status: "Active" },
-  { id: 6, name: "Robert Taylor", email: "robert@example.com", goal: "Muscle Gain", status: "Active" },
-  { id: 7, name: "Linda White", email: "linda@example.com", goal: "Stay Fit", status: "Active" },
-];
+import axios from "axios";
 
 export default function NewNotificationPage() {
   const router = useRouter();
@@ -27,12 +18,61 @@ export default function NewNotificationPage() {
   const [recipientMode, setRecipientMode] = useState("active"); // 'active' | 'all' | 'custom'
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [userPage, setUserPage] = useState(1);
+  const sendLockRef = useRef(false);
+  const USERS_PER_PAGE = 8;
 
-  const activeUsers = MOCK_USERS.filter((u) => u.status === "Active");
+  const [users, setUsers] = useState([]);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", { id: "notify-users-baseurl" });
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.", { id: "notify-users-token" });
+        return;
+      }
+
+      setIsFetchingUsers(true);
+      try {
+        // Fetch a big chunk; selection + pagination is handled locally in this UI.
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-users`, {
+          headers: { token },
+          params: { page: 1, limit: 1000 },
+        });
+        const raw = res?.data?.result?.users ?? [];
+        const mapped = Array.isArray(raw)
+          ? raw.map((u) => ({
+              id: u?._id ?? u?.id,
+              name: u?.name ?? "",
+              email: u?.email ?? "",
+              goal: u?.fitnessTarget ?? u?.goalDuration ?? "",
+              status: u?.status ?? "Active",
+            }))
+          : [];
+        setUsers(mapped.filter((u) => u.id != null));
+      } catch (err) {
+        console.error("Fetch users for notification failed:", err?.response?.data || err?.message);
+        toast.error(err?.response?.data?.message || "Failed to load users", { id: "notify-users-fail" });
+      } finally {
+        setIsFetchingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  const activeUsers = users.filter((u) => u.status === "Active");
 
   const selectedCount =
     recipientMode === "all"
-      ? MOCK_USERS.length
+      ? users.length
       : recipientMode === "active"
       ? activeUsers.length
       : selectedUserIds.length;
@@ -45,19 +85,37 @@ export default function NewNotificationPage() {
   };
 
   const handleSend = () => {
+    if (sendLockRef.current) return;
+    sendLockRef.current = true;
     if (!title.trim() || !message.trim()) {
-      toast.error("Please fill in title and message");
+      toast.error("Please fill in title and message", { id: "notify-required" });
+      window.setTimeout(() => {
+        sendLockRef.current = false;
+      }, 600);
       return;
     }
 
     if (recipientMode === "custom" && selectedUserIds.length === 0) {
-      toast.error("Please select at least one user for Custom Selection");
+      toast.error("Please select at least one user for Custom Selection", { id: "notify-custom-required" });
+      window.setTimeout(() => {
+        sendLockRef.current = false;
+      }, 600);
       return;
     }
 
     toast.success("Notification queued successfully!");
     router.push("/notification");
   };
+
+  useEffect(() => {
+    // Unlock send after navigation completes/unmount, but also
+    // ensure it doesn't stay locked if we stay on the page.
+    if (!sendLockRef.current) return;
+    const t = window.setTimeout(() => {
+      sendLockRef.current = false;
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [title, message, recipientMode, selectedUserIds.length]);
 
   const pillClasses = (active) =>
     `flex-1 rounded-full border text-xs sm:text-sm font-medium py-2.5 px-4 text-center transition-all ${
@@ -76,7 +134,7 @@ export default function NewNotificationPage() {
   const baseVisibleUsers =
     recipientMode === "active"
       ? activeUsers
-      : MOCK_USERS;
+      : users;
 
   const visibleUsers = useMemo(() => {
     if (!userSearchTerm.trim()) return baseVisibleUsers;
@@ -87,6 +145,22 @@ export default function NewNotificationPage() {
         user.email.toLowerCase().includes(searchLower)
     );
   }, [baseVisibleUsers, userSearchTerm]);
+
+  const totalUserPages = Math.max(1, Math.ceil(visibleUsers.length / USERS_PER_PAGE));
+  const paginatedVisibleUsers = useMemo(() => {
+    const start = (userPage - 1) * USERS_PER_PAGE;
+    return visibleUsers.slice(start, start + USERS_PER_PAGE);
+  }, [visibleUsers, userPage]);
+
+  // Keep page in range when filters/search/mode changes.
+  useEffect(() => {
+    setUserPage((p) => Math.max(1, Math.min(p, totalUserPages)));
+  }, [totalUserPages]);
+
+  useEffect(() => {
+    // Reset to first page when search or mode changes for better UX.
+    setUserPage(1);
+  }, [userSearchTerm, recipientMode]);
 
   return (
     <div className="min-h-[80vh] py-8 px-1">
@@ -166,7 +240,7 @@ export default function NewNotificationPage() {
                 className={pillClasses(recipientMode === "all")}
                 onClick={() => setRecipientMode("all")}
               >
-                All Users ({MOCK_USERS.length})
+                All Users ({users.length})
               </button>
               <button
                 type="button"
@@ -225,12 +299,19 @@ export default function NewNotificationPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {visibleUsers.length === 0 ? (
+            {isFetchingUsers ? (
+              <div className="py-8">
+                <div className="mx-auto flex w-full max-w-sm items-center justify-center gap-3 text-sm font-medium text-[#2158A3]">
+                  <span className="h-4 w-4 rounded-full border-2 border-[#0A3161]/30 border-t-[#0A3161] animate-spin" />
+                  <span>Loading users…</span>
+                </div>
+              </div>
+            ) : visibleUsers.length === 0 ? (
               <div className="text-center py-8 text-sm text-[#5671A6]">
                 No users found matching "{userSearchTerm}"
               </div>
             ) : (
-              visibleUsers.map((user) => {
+              paginatedVisibleUsers.map((user) => {
               const isSelected =
                 recipientMode === "custom"
                   ? selectedUserIds.includes(user.id)
@@ -273,6 +354,44 @@ export default function NewNotificationPage() {
             })
             )}
           </div>
+
+          {/* Pagination (always visible; disabled when not needed) */}
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#E0E7F5] pt-3">
+              <button
+                type="button"
+                onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                disabled={userPage === 1 || totalUserPages <= 1}
+                className={`h-9 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                  userPage === 1 || totalUserPages <= 1
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "bg-white text-[#0A3161] border-[#C8D7E9] hover:bg-[#F2F5FA]"
+                }`}
+              >
+                Prev
+              </button>
+
+              <div className="text-xs text-[#5671A6]">
+                Page <span className="font-semibold text-[#0A3161]">{userPage}</span> of{" "}
+                <span className="font-semibold text-[#0A3161]">{totalUserPages}</span>
+                <span className="mx-2 text-[#5671A6]/60">|</span>
+                <span>
+                  {visibleUsers.length} user{visibleUsers.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setUserPage((p) => Math.min(totalUserPages, p + 1))}
+                disabled={userPage === totalUserPages || totalUserPages <= 1}
+                className={`h-9 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                  userPage === totalUserPages || totalUserPages <= 1
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    : "bg-white text-[#0A3161] border-[#C8D7E9] hover:bg-[#F2F5FA]"
+                }`}
+              >
+                Next
+              </button>
+            </div>
         </div>
       </div>
     </div>

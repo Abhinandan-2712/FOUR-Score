@@ -23,6 +23,7 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
 
   const difficultyOptions = ["Beginner", "Intermediate", "Advanced"];
   const mediaOptions = ["Video", "Image", "GIF"];
+  const categoryOptions = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Glutes", "Core", "Cardio", "Other"];
 
   const getMediaConfig = (type) => {
     switch (type) {
@@ -153,12 +154,23 @@ export default function EditExerciseModal({ open, exercise, onCancel, onSave }) 
               <label className="text-sm font-medium text-[#0A3161]">
                 Category <span className="text-red-500">*</span>
               </label>
-              <Input
-                className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
-                placeholder="Enter category (e.g., Chest)"
+              <select
+                className="mt-1.5 h-12 w-full rounded-lg border border-[#C8D7E9] bg-white px-4 text-sm text-[#0A3161] shadow-none outline-none focus:ring-2 focus:ring-[#0A3161]/30"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              />
+              >
+                <option value="" disabled>
+                  Select category
+                </option>
+                {formData.category && !categoryOptions.includes(formData.category) ? (
+                  <option value={formData.category}>{formData.category}</option>
+                ) : null}
+                {categoryOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
