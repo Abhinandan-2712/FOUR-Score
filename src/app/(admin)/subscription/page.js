@@ -21,12 +21,10 @@ import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const labelCls = "block text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
-const DEFAULT_ACCESS = { exerciseLibrary: true, nutritionMacros: true, recoveryContent: true };
+const DEFAULT_ACCESS = { fitnessPrograms: true };
 
 const DEFAULT_ACCESS_ITEMS = {
-  exerciseLibrary: { mode: "all", ids: [] },
-  nutritionMacros: { mode: "all", ids: [] },
-  recoveryContent: { mode: "all", ids: [] },
+  fitnessPrograms: { mode: "all", ids: [] },
 };
 
 const INITIAL_PLANS = [
@@ -68,23 +66,13 @@ function makePlanId(name) {
 
 function planToDraft(plan) {
   const access = {
-    exerciseLibrary: plan?.access?.exerciseLibrary ?? DEFAULT_ACCESS.exerciseLibrary,
-    nutritionMacros: plan?.access?.nutritionMacros ?? DEFAULT_ACCESS.nutritionMacros,
-    recoveryContent: plan?.access?.recoveryContent ?? DEFAULT_ACCESS.recoveryContent,
+    fitnessPrograms: plan?.access?.fitnessPrograms ?? DEFAULT_ACCESS.fitnessPrograms,
   };
 
   const accessItems = {
-    exerciseLibrary: {
-      mode: plan?.accessItems?.exerciseLibrary?.mode ?? "all",
-      ids: plan?.accessItems?.exerciseLibrary?.ids ?? [],
-    },
-    nutritionMacros: {
-      mode: plan?.accessItems?.nutritionMacros?.mode ?? "all",
-      ids: plan?.accessItems?.nutritionMacros?.ids ?? [],
-    },
-    recoveryContent: {
-      mode: plan?.accessItems?.recoveryContent?.mode ?? "all",
-      ids: plan?.accessItems?.recoveryContent?.ids ?? [],
+    fitnessPrograms: {
+      mode: plan?.accessItems?.fitnessPrograms?.mode ?? "all",
+      ids: plan?.accessItems?.fitnessPrograms?.ids ?? [],
     },
   };
 
@@ -107,9 +95,7 @@ const chipClasses = (active) =>
   }`;
 
 const ACCESS_OPTIONS = [
-  { key: "exerciseLibrary", label: "Exercise Library" },
-  { key: "nutritionMacros", label: "Nutrition & Macros" },
-  { key: "recoveryContent", label: "Recovery Content" },
+  { key: "fitnessPrograms", label: "Fitness Programs" },
 ];
 
 function AccessItemPicker({
@@ -249,9 +235,7 @@ export default function SubscriptionAdminPage() {
   const [modal, setModal] = useState({ open: false, mode: "add", planId: null });
   const [draft, setDraft] = useState(planToDraft(null));
   const [deleteModal, setDeleteModal] = useState({ open: false, planId: null });
-  const [exerciseOptions, setExerciseOptions] = useState([]);
-  const [nutritionOptions, setNutritionOptions] = useState([]);
-  const [recoveryOptions, setRecoveryOptions] = useState([]);
+  const [fitnessProgramOptions, setFitnessProgramOptions] = useState([]);
   const [isLoadingAccessLists, setIsLoadingAccessLists] = useState(false);
 
   useEffect(() => {
@@ -260,7 +244,7 @@ export default function SubscriptionAdminPage() {
 
   useEffect(() => {
     if (!modal.open) return;
-    if (exerciseOptions.length && nutritionOptions.length && recoveryOptions.length) return;
+    if (fitnessProgramOptions.length) return;
 
     const fetchAll = async () => {
       const token = localStorage.getItem("token");
@@ -277,43 +261,27 @@ export default function SubscriptionAdminPage() {
 
       setIsLoadingAccessLists(true);
       try {
-        const [exRes, nuRes, reRes] = await Promise.all([
-          axios.get(`${baseUrl}/api/admin/get-all-exercises`, {
-            headers: { token },
-            params: { page: 1, limit: 1000 },
-          }),
-          axios.get(`${baseUrl}/api/admin/get-all-nutrition-items`, {
-            headers: { token },
-            params: { page: 1, limit: 1000 },
-          }),
-          axios.get(`${baseUrl}/api/admin/get-all-recovery-content`, {
-            headers: { token },
-            params: { page: 1, limit: 1000 },
-          }),
-        ]);
+        const res = await axios.get(`${baseUrl}/api/admin/get-all-programs`, {
+          headers: { token, Authorization: `Bearer ${token}` },
+          params: { page: 1, limit: 1000 },
+        });
 
-        const exList = exRes?.data?.result?.exercises ?? [];
-        const nuList = nuRes?.data?.result?.items ?? [];
-        const reList = reRes?.data?.result?.contentList ?? [];
+        const payload = res?.data ?? {};
+        const list =
+          payload?.result?.programs ??
+          payload?.result?.data ??
+          payload?.result ??
+          payload?.programs ??
+          payload?.data ??
+          [];
 
-        setExerciseOptions(
-          Array.isArray(exList)
-            ? exList
-                .map((ex) => ({ id: ex?._id ?? ex?.id, title: ex?.title ?? "" }))
-                .filter((x) => x.id && x.title)
-            : []
-        );
-        setNutritionOptions(
-          Array.isArray(nuList)
-            ? nuList
-                .map((n) => ({ id: n?._id ?? n?.id, name: n?.name ?? n?.foodItem ?? "" }))
-                .filter((x) => x.id && x.name)
-            : []
-        );
-        setRecoveryOptions(
-          Array.isArray(reList)
-            ? reList
-                .map((r) => ({ id: r?._id ?? r?.id, title: r?.title ?? "" }))
+        setFitnessProgramOptions(
+          Array.isArray(list)
+            ? list
+                .map((p) => ({
+                  id: p?._id ?? p?.id,
+                  title: p?.title ?? p?.name ?? p?.programName ?? "",
+                }))
                 .filter((x) => x.id && x.title)
             : []
         );
@@ -395,27 +363,13 @@ export default function SubscriptionAdminPage() {
       .map((f) => f.trim())
       .filter(Boolean);
     const access = {
-      exerciseLibrary: !!d?.access?.exerciseLibrary,
-      nutritionMacros: !!d?.access?.nutritionMacros,
-      recoveryContent: !!d?.access?.recoveryContent,
+      fitnessPrograms: !!d?.access?.fitnessPrograms,
     };
     const accessItems = {
-      exerciseLibrary: access.exerciseLibrary
+      fitnessPrograms: access.fitnessPrograms
         ? {
-            mode: d?.accessItems?.exerciseLibrary?.mode === "selected" ? "selected" : "all",
-            ids: Array.isArray(d?.accessItems?.exerciseLibrary?.ids) ? d.accessItems.exerciseLibrary.ids : [],
-          }
-        : { mode: "all", ids: [] },
-      nutritionMacros: access.nutritionMacros
-        ? {
-            mode: d?.accessItems?.nutritionMacros?.mode === "selected" ? "selected" : "all",
-            ids: Array.isArray(d?.accessItems?.nutritionMacros?.ids) ? d.accessItems.nutritionMacros.ids : [],
-          }
-        : { mode: "all", ids: [] },
-      recoveryContent: access.recoveryContent
-        ? {
-            mode: d?.accessItems?.recoveryContent?.mode === "selected" ? "selected" : "all",
-            ids: Array.isArray(d?.accessItems?.recoveryContent?.ids) ? d.accessItems.recoveryContent.ids : [],
+            mode: d?.accessItems?.fitnessPrograms?.mode === "selected" ? "selected" : "all",
+            ids: Array.isArray(d?.accessItems?.fitnessPrograms?.ids) ? d.accessItems.fitnessPrograms.ids : [],
           }
         : { mode: "all", ids: [] },
     };
@@ -744,34 +698,14 @@ export default function SubscriptionAdminPage() {
                           Plan access
                         </p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                          <div className="rounded-xl border border-border bg-muted/20 px-3 py-2 text-sm">
-                            <span className="font-semibold text-foreground">Exercise Library</span>
+                          <div className="rounded-xl border border-border bg-muted/20 px-3 py-2 text-sm sm:col-span-3">
+                            <span className="font-semibold text-foreground">Fitness Programs</span>
                             <div className="text-xs text-muted-foreground mt-0.5">
-                              {!draft.access?.exerciseLibrary
+                              {!draft.access?.fitnessPrograms
                                 ? "Not included"
-                                : draft.accessItems?.exerciseLibrary?.mode === "selected"
-                                  ? `${draft.accessItems?.exerciseLibrary?.ids?.length ?? 0} selected`
-                                  : "All items"}
-                            </div>
-                          </div>
-                          <div className="rounded-xl border border-border bg-muted/20 px-3 py-2 text-sm">
-                            <span className="font-semibold text-foreground">Nutrition &amp; Macros</span>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {!draft.access?.nutritionMacros
-                                ? "Not included"
-                                : draft.accessItems?.nutritionMacros?.mode === "selected"
-                                  ? `${draft.accessItems?.nutritionMacros?.ids?.length ?? 0} selected`
-                                  : "All items"}
-                            </div>
-                          </div>
-                          <div className="rounded-xl border border-border bg-muted/20 px-3 py-2 text-sm">
-                            <span className="font-semibold text-foreground">Recovery Content</span>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {!draft.access?.recoveryContent
-                                ? "Not included"
-                                : draft.accessItems?.recoveryContent?.mode === "selected"
-                                  ? `${draft.accessItems?.recoveryContent?.ids?.length ?? 0} selected`
-                                  : "All items"}
+                                : draft.accessItems?.fitnessPrograms?.mode === "selected"
+                                  ? `${draft.accessItems?.fitnessPrograms?.ids?.length ?? 0} selected`
+                                  : "All programs"}
                             </div>
                           </div>
                         </div>
@@ -885,67 +819,29 @@ export default function SubscriptionAdminPage() {
                         </div>
                       ) : null}
 
-                      {draft.access?.exerciseLibrary ? (
+                      {draft.access?.fitnessPrograms ? (
                         <AccessItemPicker
-                          title="Exercise Library"
-                          items={exerciseOptions}
+                          title="Fitness Programs"
+                          items={fitnessProgramOptions}
                           labelGetter={(x) => x.title}
-                          mode={draft.accessItems?.exerciseLibrary?.mode ?? "all"}
-                          selectedIds={draft.accessItems?.exerciseLibrary?.ids ?? []}
+                          mode={draft.accessItems?.fitnessPrograms?.mode ?? "all"}
+                          selectedIds={draft.accessItems?.fitnessPrograms?.ids ?? []}
                           onModeChange={(m) =>
                             setDraft((p) => ({
                               ...p,
-                              accessItems: { ...p.accessItems, exerciseLibrary: { ...p.accessItems.exerciseLibrary, mode: m } },
+                              accessItems: {
+                                ...p.accessItems,
+                                fitnessPrograms: { ...p.accessItems.fitnessPrograms, mode: m },
+                              },
                             }))
                           }
                           onSelectedIdsChange={(ids) =>
                             setDraft((p) => ({
                               ...p,
-                              accessItems: { ...p.accessItems, exerciseLibrary: { ...p.accessItems.exerciseLibrary, ids } },
-                            }))
-                          }
-                        />
-                      ) : null}
-
-                      {draft.access?.nutritionMacros ? (
-                        <AccessItemPicker
-                          title="Nutrition & Macros"
-                          items={nutritionOptions}
-                          labelGetter={(x) => x.name}
-                          mode={draft.accessItems?.nutritionMacros?.mode ?? "all"}
-                          selectedIds={draft.accessItems?.nutritionMacros?.ids ?? []}
-                          onModeChange={(m) =>
-                            setDraft((p) => ({
-                              ...p,
-                              accessItems: { ...p.accessItems, nutritionMacros: { ...p.accessItems.nutritionMacros, mode: m } },
-                            }))
-                          }
-                          onSelectedIdsChange={(ids) =>
-                            setDraft((p) => ({
-                              ...p,
-                              accessItems: { ...p.accessItems, nutritionMacros: { ...p.accessItems.nutritionMacros, ids } },
-                            }))
-                          }
-                        />
-                      ) : null}
-
-                      {draft.access?.recoveryContent ? (
-                        <AccessItemPicker
-                          title="Recovery Content"
-                          items={recoveryOptions}
-                          labelGetter={(x) => x.title}
-                          mode={draft.accessItems?.recoveryContent?.mode ?? "all"}
-                          selectedIds={draft.accessItems?.recoveryContent?.ids ?? []}
-                          onModeChange={(m) =>
-                            setDraft((p) => ({
-                              ...p,
-                              accessItems: { ...p.accessItems, recoveryContent: { ...p.accessItems.recoveryContent, mode: m } },
-                            }))
-                          }
-                          onSelectedIdsChange={(ids) =>
-                            setDraft((p) => ({
-                              ...p,
-                              accessItems: { ...p.accessItems, recoveryContent: { ...p.accessItems.recoveryContent, ids } },
+                              accessItems: {
+                                ...p.accessItems,
+                                fitnessPrograms: { ...p.accessItems.fitnessPrograms, ids },
+                              },
                             }))
                           }
                         />

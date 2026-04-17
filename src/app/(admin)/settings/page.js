@@ -310,6 +310,7 @@ export default function SettingsPage() {
                 className="mt-1.5 h-11 w-full rounded-lg border border-[#C8D7E9] bg-white px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-[#0A3161]/30"
                 value={appName}
                 onChange={(e) => setAppName(e.target.value)}
+                disabled
               />
             </div>
 
@@ -320,6 +321,7 @@ export default function SettingsPage() {
                 className="mt-1.5 w-full rounded-xl border border-[#C8D7E9] bg-white px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30 resize-none"
                 value={appDescription}
                 onChange={(e) => setAppDescription(e.target.value)}
+                disabled
               />
             </div>
 

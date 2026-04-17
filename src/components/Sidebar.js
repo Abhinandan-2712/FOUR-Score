@@ -46,21 +46,21 @@ export default function Sidebar() {
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: MdDashboard },
     { href: "/users", label: "User", icon: LuUsers },
-    {
-      href: "/exercise-library",
-      label: "Exercise Library",
-      icon: LiaDumbbellSolid,
-    },
-    { 
-      href: "/nutrition-macros", 
-      label: "Nutrition & Macros", 
-      icon: LuApple 
-    },
-    {
-      href: "/recovery-content",
-      label: "Recovery Content",
-      icon: FaRegHeart,
-    },
+    // {
+    //   href: "/exercise-library",
+    //   label: "Exercise Library",
+    //   icon: LiaDumbbellSolid,
+    // },
+    // { 
+    //   href: "/nutrition-macros", 
+    //   label: "Nutrition & Macros", 
+    //   icon: LuApple 
+    // },
+    // {
+    //   href: "/recovery-content",
+    //   label: "Recovery Content",
+    //   icon: FaRegHeart,
+    // },
     {
       href: "/fitness-programs",
       label: "Fitness Programs",

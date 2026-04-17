@@ -609,7 +609,7 @@ export default function FitnessProgramEditorForm({
           {activeTab === "workouts" && (
             <div className="space-y-6 max-w-6xl">
               <p className="text-sm text-[#5671A6] -mt-1 w-full max-w-none leading-relaxed">
-                <span className="font-medium text-[#2158A3]">Part 2: The exercise library</span> — PDF: tag exercises
+                <span className="font-medium text-[#2158A3]">Part 2: The workout library</span> — PDF: tag workouts
                 to specific days. Three templates — Workout A (e.g. Monday legs), B (Wednesday upper), C (Friday full
                 body). Use movement tags (Large Muscle, Primary Strength, etc.).
               </p>
@@ -625,7 +625,7 @@ export default function FitnessProgramEditorForm({
                   <FormSection
                     key={letter}
                     title={label}
-                    hint="PDF: exercise name and tag in parentheses, e.g. Goblet Squat (Large Muscle)."
+                    hint="PDF: workout name and tag in parentheses, e.g. Goblet Squat (Large Muscle)."
                     icon={
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0A3161] text-xs font-bold text-white shadow-sm">
                         {letter}
@@ -639,7 +639,7 @@ export default function FitnessProgramEditorForm({
                           <TableRow className="bg-[#F2F5FA] hover:bg-[#F2F5FA] border-b border-[#D9E8F5]">
                             <TableHead className="w-14 px-2 py-3 text-[#2158A3] font-semibold">#</TableHead>
                             <TableHead className="min-w-[180px] px-2 py-3 text-[#2158A3] font-semibold">
-                              Exercise
+                              Workout
                             </TableHead>
                             <TableHead className="w-[min(240px,45vw)] px-2 py-3 text-[#2158A3] font-semibold">
                               Tag
@@ -859,7 +859,7 @@ export default function FitnessProgramEditorForm({
 
               <FormSection
                 title="Implementation note for the developer"
-                hint="PDF (after Part 3): progressive overload uses the week variable; exercise list stays constant for the 4-week block."
+                hint="PDF (after Part 3): progressive overload uses the week variable; workout list stays constant for the 4-week block."
                 tone="slate"
               >
                 <textarea

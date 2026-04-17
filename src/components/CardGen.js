@@ -8,10 +8,27 @@ export default function Card({
   isIncrease = true,
   para = "Parents Who Have Visited So Far",
   isCurrency = false,
+  currency = "INR",
+  locale = "en-IN",
   icon: Icon = FaUser,
   iconBg = "bg-blue-100",
   iconColor = "text-blue-600",
 }) {
+  const formattedAmount = (() => {
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return isCurrency ? "—" : "0";
+    if (!isCurrency) return n.toLocaleString(locale);
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(n);
+    } catch {
+      return `₹${n.toLocaleString(locale)}`;
+    }
+  })();
+
   return (
     <div className="surface-card w-full transition-shadow duration-300 hover:shadow-[var(--shadow-premium)]">
       <div className="p-6">
@@ -19,9 +36,7 @@ export default function Card({
           <div>
             <p className="text-sm font-medium text-primary/75">{title}</p>
             <h1 className="mt-1 text-xl font-semibold leading-7 tracking-tight text-primary">
-              {isCurrency
-                ? `$${Number(amount).toLocaleString()}`
-                : Number(amount).toLocaleString()}
+              {formattedAmount}
             </h1>
           </div>
           <div

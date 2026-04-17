@@ -233,6 +233,17 @@ export default function Dashboard() {
     };
   };
 
+  const pickSubscriptionRevenue = (cards) =>
+    firstDefined(
+      cards?.subscriptionRevenue,
+      cards?.subscriptionAmount,
+      cards?.totalSubscriptionRevenue,
+      cards?.totalRevenue,
+      cards?.revenue,
+      cards?.amount,
+      cards?.totalAmount
+    ) ?? 0;
+
   const isDev = process.env.NODE_ENV !== "production";
 
   const Skeleton = ({ className }) => (
@@ -423,11 +434,15 @@ export default function Dashboard() {
       ],
     });
 
+  const subscriptionsData =
+    apiData?.doughnuts?.subscriptions ??
+    (apiData ? emptyDoughnutChart() : undefined);
+
   const quickActions = [
     { label: "Manage Users", href: "/users" },
-    { label: "Exercise Library", href: "/exercise-library" },
-    { label: "Nutrition & Macros", href: "/nutrition-macros" },
-    { label: "Recovery Content", href: "/recovery-content" },
+    // { label: "Exercise Library", href: "/exercise-library" },
+    // { label: "Nutrition & Macros", href: "/nutrition-macros" },
+    // { label: "Recovery Content", href: "/recovery-content" },
     { label: "Fitness Programs", href: "/fitness-programs" },
     { label: "Notifications", href: "/notification" },
     { label: "Content Management", href: "/content-management" },
@@ -487,13 +502,13 @@ export default function Dashboard() {
     const labels = d?.labels;
     const data = d?.datasets?.[0]?.data;
     if (!Array.isArray(labels) || !Array.isArray(data)) {
-      return apiData ? emptyBarChart("Exercises", "#0A3161") : undefined;
+      return apiData ? emptyBarChart("Programs", "#0A3161") : undefined;
     }
     return {
       labels,
       datasets: [
         {
-          label: "Exercises",
+          label: "Programs",
           data,
           backgroundColor: "#0A3161",
           borderRadius: 6,
@@ -506,11 +521,11 @@ export default function Dashboard() {
   // Exercise completions (this week)
   const exerciseCompletionsWeekData =
     apiData?.charts?.exerciseCompletionsWeek ??
-    (apiData ? emptyBarChart("Exercises Completed", "#0A3161") : {
+    (apiData ? emptyBarChart("Programs Completed", "#0A3161") : {
       labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
       datasets: [
         {
-          label: "Exercises Completed",
+          label: "Programs Completed",
           data: [320, 410, 380, 520, 450, 610, 560],
           backgroundColor: "#0A3161",
           borderRadius: 6,
@@ -520,14 +535,14 @@ export default function Dashboard() {
     });
 
   // Nutrition adherence (this week, %)
-  const nutritionAdherenceWeekData =
-    apiData?.charts?.nutritionAdherenceWeek ??
-    (apiData ? emptyBarChart("Adherence (%)", "#155dfc") : {
+  const subscriptionRevenueWeekData =
+    apiData?.charts?.subscriptionRevenueWeek ??
+    (apiData ? emptyBarChart("Revenue", "#155dfc") : {
       labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
       datasets: [
         {
-          label: "Adherence (%)",
-          data: [62, 68, 65, 71, 69, 75, 73],
+          label: "Revenue",
+          data: [6200, 6800, 6500, 7100, 6900, 7500, 7300],
           backgroundColor: "#155dfc",
           borderRadius: 6,
           barThickness: 40,
@@ -607,6 +622,7 @@ export default function Dashboard() {
             activeToday: cards.activeToday,
             exercisesToday: cards.exercisesToday,
             nutritionLogsToday: cards.nutritionLogsToday,
+            subscriptionRevenue: pickSubscriptionRevenue(cards),
           },
           charts: {
             newUsersMonthly:
@@ -630,15 +646,24 @@ export default function Dashboard() {
               seriesToBar(charts.exerciseCompletionsByDay, {
                 labelKey: "day",
                 valueKey: "count",
-                datasetLabel: "Exercises Completed",
+                datasetLabel: "Programs Completed",
                 color: "#0A3161",
               }),
             nutritionAdherenceWeek:
-              coerceChartJs(charts.nutritionAdherenceWeek, "bar") ??
-              seriesToBar(charts.nutritionLogsByDay, {
+              coerceChartJs(charts.subscriptionRevenueWeek, "bar") ??
+              coerceChartJs(charts.subscriptionRevenueByDay, "bar") ??
+              coerceChartJs(charts.subscriptionAmountByDay, "bar") ??
+              coerceChartJs(charts.revenueByDay, "bar") ??
+              seriesToBar(charts.subscriptionRevenueByDay, {
                 labelKey: "day",
-                valueKey: "count",
-                datasetLabel: "Nutrition Logs",
+                valueKey: "amount",
+                datasetLabel: "Revenue",
+                color: "#155dfc",
+              }) ??
+              seriesToBar(charts.revenueByDay, {
+                labelKey: "day",
+                valueKey: "amount",
+                datasetLabel: "Revenue",
                 color: "#155dfc",
               }),
           },
@@ -651,6 +676,10 @@ export default function Dashboard() {
             nutritionLogging:
               kvArrayToDoughnut(donuts.nutritionLoggingStatus) ??
               kvArrayToDoughnut(donuts.nutritionLogsThisWeek),
+            subscriptions:
+              kvArrayToDoughnut(donuts.subscriptionPlans) ??
+              kvArrayToDoughnut(donuts.subscriptionsByPlan) ??
+              kvArrayToDoughnut(donuts.subscriptionStatus),
           },
           recentActivity: recentActivityUnified,
           topExercises: normalizeArray(tables.topExercisesThisWeek) ?? [],
@@ -675,7 +704,7 @@ export default function Dashboard() {
       <div className="mx-auto w-full py-6">
         <AdminHeaderCard
           title="Dashboard"
-          subtitle="Admin overview for users, exercise, and nutrition."
+          subtitle="Admin overview for users, fitness programs, and subscription revenue."
           actions={
             <div className="flex flex-wrap items-center gap-2 md:justify-end">
               <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -722,7 +751,7 @@ export default function Dashboard() {
 
             <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
               <SkeletonPanel title="Users" />
-              <SkeletonPanel title="Exercises" />
+              <SkeletonPanel title="Programs" />
               {/* <SkeletonPanel title="Exercise" /> */}
               <SkeletonPanel title="Nutrition" />
             </div>
@@ -736,7 +765,7 @@ export default function Dashboard() {
                 </div>
                 <div className="surface-card p-6">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-foreground">Top Exercises</p>
+                    <p className="text-sm font-semibold text-foreground">Top Programs</p>
                     <Skeleton className="h-9 w-28 rounded-xl" />
                   </div>
                   <div className="mt-4 space-y-2">
@@ -852,21 +881,23 @@ export default function Dashboard() {
             iconColor="text-emerald-700"
           />
           <Card
-            title="Total Exercises"
+            title="Total Programs"
             amount={apiData?.cards?.exercisesToday ?? 0}
             percentage={11}
             isIncrease={true}
-            para={`${timeframeLabelMap[timeframe]} exercises` ?? "All time exercises"}
+            para={`${timeframeLabelMap[timeframe]} programs` ?? "All time programs"}
             icon={LiaDumbbellSolid}
             iconBg="bg-rose-500/10"
             iconColor="text-rose-700"
           />
           <Card
-            title="Total Nutrition Logs"
-            amount={apiData?.cards?.nutritionLogsToday ?? 0}
+            title="Subscription Revenue"
+            amount={apiData?.cards?.subscriptionRevenue ?? 0}
             percentage={6}
             isIncrease={true}
-            para={`${timeframeLabelMap[timeframe]} nutrition logs` ?? "All time nutrition logs"}
+            para={`${timeframeLabelMap[timeframe]} revenue from subscriptions` ?? "All time subscription revenue"}
+            isCurrency
+            currency="INR"
             icon={LuApple}
             iconBg="bg-indigo-500/10"
             iconColor="text-indigo-700"
@@ -886,8 +917,8 @@ export default function Dashboard() {
           <ActiveUsersWeekChart
             data={exerciseTypesBarData}
             baseOptions={baseOptions}
-            title="Exercises"
-            subtitle="Exercise types (selected timeframe)"
+            title="Programs"
+            subtitle={`${timeframeLabelMap[timeframe]} programs` ?? "All time programs"}
             yMax={niceMax(getChartMax(exerciseTypesBarData), 5)}
             yStep={niceStep(niceMax(getChartMax(exerciseTypesBarData), 5))}
           />
@@ -900,12 +931,12 @@ export default function Dashboard() {
           yStep={100}
         /> */}
           <ActiveUsersWeekChart
-            data={nutritionAdherenceWeekData}
+            data={subscriptionRevenueWeekData}
             baseOptions={baseOptions}
-            title="Nutrition"
-            subtitle={`${timeframeLabelMap[timeframe]} adherence` ?? "All time adherence"}
-            yMax={niceMax(getChartMax(nutritionAdherenceWeekData), 10)}
-            yStep={niceStep(niceMax(getChartMax(nutritionAdherenceWeekData), 10))}
+            title="Subscription Revenue"
+            subtitle={`${timeframeLabelMap[timeframe]} revenue` ?? "All time revenue"}
+            yMax={niceMax(getChartMax(subscriptionRevenueWeekData), 10)}
+            yStep={niceStep(niceMax(getChartMax(subscriptionRevenueWeekData), 10))}
           />
         </div>
 
@@ -919,13 +950,13 @@ export default function Dashboard() {
                 baseOptions={baseOptions}
               />
               <StatusDoughnut
-                title="Exercise Types"
+                title="Programs"
                 chartData={exerciseTypesData}
                 baseOptions={baseOptions}
               />
               <StatusDoughnut
-                title="Nutrition Logging"
-                chartData={nutritionLoggingData}
+                title="Subscriptions"
+                chartData={subscriptionsData ?? nutritionLoggingData}
                 baseOptions={baseOptions}
               />
             </div>
@@ -936,7 +967,7 @@ export default function Dashboard() {
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold tracking-tight text-foreground">
-                      Top Exercises
+                      Top Programs
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {timeframeLabelMap[timeframe]} • Highest completions across users
@@ -954,7 +985,7 @@ export default function Dashboard() {
               <div className="p-5">
                 <div className="overflow-hidden rounded-xl border border-border bg-card">
                   <div className="grid grid-cols-12 bg-muted/60 px-4 py-3 text-xs font-semibold text-muted-foreground">
-                    <div className="col-span-6">Exercise</div>
+                    <div className="col-span-6">Programs</div>
                     <div className="col-span-4 text-right">Completions</div>
                     <div className="col-span-2 text-right">Change</div>
                   </div>
