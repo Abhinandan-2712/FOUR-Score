@@ -25,7 +25,7 @@ export default function Card({
         maximumFractionDigits: 0,
       }).format(n);
     } catch {
-      return `₹${n.toLocaleString(locale)}`;
+      return `$${n.toLocaleString(locale)}`;
     }
   })();
 

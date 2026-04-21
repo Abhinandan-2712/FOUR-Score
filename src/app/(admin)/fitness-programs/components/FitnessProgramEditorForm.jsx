@@ -102,6 +102,38 @@ export default function FitnessProgramEditorForm({
 
   const currentIdx = tabIndex(activeTab);
 
+  // Local-only previews for uploaded media (images / gifs / video).
+  // We keep actual persisted values in draft.recovery.mediaUrls (string[]),
+  // while preview URLs are stored only in component state.
+  const [recoveryMediaPreviews, setRecoveryMediaPreviews] = useState([]);
+
+  // Per-exercise media previews (A1/A2/...). Persisted URLs live on each exercise row: draft.workouts[letter][i].mediaUrls
+  // Preview metadata (type/name) is kept only in component state keyed by `${letter}-${i}`.
+  const [workoutRowMediaPreviews, setWorkoutRowMediaPreviews] = useState({});
+
+  useEffect(() => {
+    return () => {
+      // Revoke blob URLs on unmount.
+      for (const p of recoveryMediaPreviews) {
+        try {
+          if (p?.url?.startsWith("blob:")) URL.revokeObjectURL(p.url);
+        } catch {
+          /* ignore */
+        }
+      }
+      for (const key of Object.keys(workoutRowMediaPreviews ?? {})) {
+        for (const p of workoutRowMediaPreviews?.[key] ?? []) {
+          try {
+            if (p?.url?.startsWith("blob:")) URL.revokeObjectURL(p.url);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // Clear the "advance" latch once the UI has moved.
     if (isAdvancing) setIsAdvancing(false);
@@ -210,6 +242,142 @@ export default function FitnessProgramEditorForm({
         },
       };
     });
+  };
+
+  const addRecoveryMediaUrls = (urls) => {
+    const list = (urls ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
+    if (!list.length) return;
+    setDraft((d) => {
+      if (!d) return d;
+      const existing = Array.isArray(d?.recovery?.mediaUrls) ? d.recovery.mediaUrls : [];
+      const next = Array.from(new Set([...existing, ...list]));
+      return { ...d, recovery: { ...d.recovery, mediaUrls: next } };
+    });
+  };
+
+  const removeRecoveryMediaAt = (idx) => {
+    setDraft((d) => {
+      if (!d) return d;
+      const existing = Array.isArray(d?.recovery?.mediaUrls) ? d.recovery.mediaUrls : [];
+      const next = existing.filter((_, i) => i !== idx);
+      return { ...d, recovery: { ...d.recovery, mediaUrls: next } };
+    });
+    setRecoveryMediaPreviews((prev) => {
+      const removed = prev?.[idx];
+      try {
+        if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+      } catch {
+        /* ignore */
+      }
+      return (prev ?? []).filter((_, i) => i !== idx);
+    });
+  };
+
+  const handleRecoveryMediaFiles = (fileList) => {
+    const files = Array.from(fileList ?? []);
+    if (!files.length) return;
+
+    const MAX_FILES = 8;
+    const allowed = files
+      .filter((f) => {
+        const t = String(f?.type ?? "");
+        return t.startsWith("image/") || t.startsWith("video/");
+      })
+      .slice(0, MAX_FILES);
+
+    if (!allowed.length) {
+      toast.error("Please select image / GIF / video files.");
+      return;
+    }
+    if (files.length > allowed.length) {
+      toast.error(`Only image/video files allowed (max ${MAX_FILES}).`);
+    }
+
+    const previews = allowed.map((f) => ({
+      url: URL.createObjectURL(f),
+      type: String(f.type || ""),
+      name: f.name || "media",
+    }));
+
+    setRecoveryMediaPreviews((prev) => {
+      const next = [...(prev ?? []), ...previews].slice(0, MAX_FILES);
+      return next;
+    });
+
+    // Persist URLs only as placeholders for now (these blob URLs won't survive refresh).
+    // If backend later supports uploads, replace this with upload->public URL.
+    addRecoveryMediaUrls(previews.map((p) => p.url));
+  };
+
+  const addWorkoutRowMediaUrls = (letter, rowIndex, urls) => {
+    const list = (urls ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
+    if (!list.length) return;
+    setDraft((d) => {
+      if (!d) return d;
+      const rows = [...(d.workouts?.[letter] ?? [])];
+      const row = rows[rowIndex] ?? {};
+      const existing = Array.isArray(row.mediaUrls) ? row.mediaUrls : [];
+      const nextUrls = Array.from(new Set([...existing, ...list]));
+      rows[rowIndex] = { ...row, mediaUrls: nextUrls };
+      return { ...d, workouts: { ...d.workouts, [letter]: rows } };
+    });
+  };
+
+  const removeWorkoutRowMediaAt = (letter, rowIndex, idx) => {
+    const key = `${letter}-${rowIndex}`;
+    setDraft((d) => {
+      if (!d) return d;
+      const rows = [...(d.workouts?.[letter] ?? [])];
+      const row = rows[rowIndex] ?? {};
+      const existing = Array.isArray(row.mediaUrls) ? row.mediaUrls : [];
+      rows[rowIndex] = { ...row, mediaUrls: existing.filter((_, i) => i !== idx) };
+      return { ...d, workouts: { ...d.workouts, [letter]: rows } };
+    });
+
+    setWorkoutRowMediaPreviews((prev) => {
+      const removed = prev?.[key]?.[idx];
+      try {
+        if (removed?.url?.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+      } catch {
+        /* ignore */
+      }
+      return { ...(prev ?? {}), [key]: (prev?.[key] ?? []).filter((_, i) => i !== idx) };
+    });
+  };
+
+  const handleWorkoutRowMediaFiles = (letter, rowIndex, fileList) => {
+    const files = Array.from(fileList ?? []);
+    if (!files.length) return;
+
+    const MAX_FILES = 8;
+    const allowed = files
+      .filter((f) => {
+        const t = String(f?.type ?? "");
+        return t.startsWith("image/") || t.startsWith("video/");
+      })
+      .slice(0, MAX_FILES);
+
+    if (!allowed.length) {
+      toast.error("Please select image / GIF / video files.");
+      return;
+    }
+    if (files.length > allowed.length) {
+      toast.error(`Only image/video files allowed (max ${MAX_FILES}).`);
+    }
+
+    const previews = allowed.map((f) => ({
+      url: URL.createObjectURL(f),
+      type: String(f.type || ""),
+      name: f.name || "media",
+    }));
+
+    const key = `${letter}-${rowIndex}`;
+    setWorkoutRowMediaPreviews((prev) => ({
+      ...(prev ?? {}),
+      [key]: [...(prev?.[key] ?? []), ...previews].slice(0, MAX_FILES),
+    }));
+
+    addWorkoutRowMediaUrls(letter, rowIndex, previews.map((p) => p.url));
   };
 
   const ta =
@@ -644,6 +812,9 @@ export default function FitnessProgramEditorForm({
                             <TableHead className="w-[min(240px,45vw)] px-2 py-3 text-[#2158A3] font-semibold">
                               Tag
                             </TableHead>
+                            <TableHead className="min-w-[180px] px-2 py-3 text-[#2158A3] font-semibold">
+                              Media
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -652,6 +823,8 @@ export default function FitnessProgramEditorForm({
                               ex.tag && !TAG_OPTIONS.includes(ex.tag)
                                 ? [ex.tag, ...TAG_OPTIONS]
                                 : TAG_OPTIONS;
+                            const mediaKey = `${letter}-${i}`;
+                            const mediaUrls = Array.isArray(ex?.mediaUrls) ? ex.mediaUrls : [];
                             return (
                               <TableRow
                                 key={`${letter}-${i}`}
@@ -682,6 +855,77 @@ export default function FitnessProgramEditorForm({
                                       </option>
                                     ))}
                                   </select>
+                                </TableCell>
+
+                                <TableCell className="p-2 align-top">
+                                  <div className="rounded-xl border border-[#DCE7F5] bg-white px-2.5 py-2 shadow-[0_1px_2px_rgba(10,49,97,0.05)]">
+                                    <div className="flex items-center gap-2">
+                                      <label className="inline-flex h-8 min-w-[102px] cursor-pointer items-center justify-center rounded-md border border-[#BDD2EE] bg-[#EEF5FF] px-3 text-[11px] font-semibold text-[#0A3161] transition hover:bg-[#E1EEFF]">
+                                        Upload files
+                                        <input
+                                          type="file"
+                                          accept="image/*,image/gif,video/*"
+                                          multiple
+                                          onChange={(e) => handleWorkoutRowMediaFiles(letter, i, e.target.files)}
+                                          className="sr-only"
+                                        />
+                                      </label>
+
+                                      {mediaUrls.length ? (
+                                        <div className="min-w-0 flex-1 overflow-x-auto">
+                                          <div className="flex items-center gap-1.5 pr-1">
+                                            {mediaUrls.slice(0, 3).map((url, idx) => {
+                                              const preview = workoutRowMediaPreviews?.[mediaKey]?.[idx];
+                                              const isVideo =
+                                                String(preview?.type ?? "").startsWith("video/") ||
+                                                /\.(mp4|webm|ogg)(\?|#|$)/i.test(String(url));
+                                              const isImage =
+                                                String(preview?.type ?? "").startsWith("image/") ||
+                                                /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(String(url));
+                                              return (
+                                                <div
+                                                  key={`${url}-${idx}`}
+                                                  className="relative h-8 w-10 shrink-0 overflow-hidden rounded border border-[#DEE8F5] bg-[#FAFCFF]"
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => removeWorkoutRowMediaAt(letter, i, idx)}
+                                                    className="absolute right-0.5 top-0.5 z-10 inline-flex h-3.5 w-3.5 items-center justify-center rounded bg-white/95 text-[9px] font-bold text-[#B91C1C] border border-[#E8EEF4]"
+                                                    aria-label="Remove media"
+                                                  >
+                                                    ×
+                                                  </button>
+                                                  {isVideo ? (
+                                                    <div className="flex h-full w-full items-center justify-center text-[8px] font-semibold text-[#2158A3]">
+                                                      VID
+                                                    </div>
+                                                  ) : isImage ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={url} alt="Workout media" className="h-full w-full object-cover" />
+                                                  ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-[8px] text-muted-foreground">
+                                                      FILE
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                            {mediaUrls.length > 3 ? (
+                                              <div className="inline-flex h-8 shrink-0 items-center rounded border border-dashed border-[#C8D7E9] px-1.5 text-[9px] font-medium text-muted-foreground">
+                                                +{mediaUrls.length - 3}
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="min-w-0 flex-1 text-[10px] text-muted-foreground">No files selected</div>
+                                      )}
+
+                                      <span className="shrink-0 rounded-full bg-[#F8FAFE] px-2 py-1 text-[10px] font-medium text-muted-foreground border border-[#E1EAF6]">
+                                        {mediaUrls.length ? `${mediaUrls.length} file${mediaUrls.length > 1 ? "s" : ""}` : "No files"}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
@@ -785,6 +1029,120 @@ export default function FitnessProgramEditorForm({
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    <div>
+                      <label className={lbl}>Recovery media (images / GIF / video)</label>
+                      <p className="text-xs text-[#5671A6] mt-0.5 mb-2">
+                        Optional — add visuals for the recovery day. (If API upload isn’t wired yet, these act as placeholders.)
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-1">
+                        <div className="rounded-xl border border-[#C8D7E9] bg-[#FCFDFF] p-4 shadow-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#2158A3]">Upload files</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {(draft?.recovery?.mediaUrls?.length ?? 0) ? `${draft.recovery.mediaUrls.length} attached` : "No files"}
+                            </p>
+                          </div>
+                          <label className="mt-3 flex min-h-[78px] cursor-pointer items-center justify-center rounded-xl border border-dashed border-[#BFD3EE] bg-white px-4 py-3 text-xs font-semibold text-[#0A3161] transition hover:bg-[#EFF5FF]">
+                            Click to upload images, GIFs, or video
+                            <input
+                              type="file"
+                              accept="image/*,image/gif,video/*"
+                              multiple
+                              onChange={(e) => handleRecoveryMediaFiles(e.target.files)}
+                              className="sr-only"
+                            />
+                          </label>
+                          <p className="mt-2 text-[11px] text-muted-foreground">
+                            Tip: use GIF for movement demo or MP4 for short guided clip.
+                          </p>
+                        </div>
+
+                        {/* <div className="rounded-xl border border-[#C8D7E9] bg-white p-3">
+                          <p className="text-xs font-semibold text-[#2158A3]">Or paste URL</p>
+                          <div className="mt-2 flex gap-2">
+                            <Input
+                              value={draft?.recovery?.mediaUrlDraft ?? ""}
+                              onChange={(e) =>
+                                setDraft((d) => ({
+                                  ...d,
+                                  recovery: { ...d.recovery, mediaUrlDraft: e.target.value },
+                                }))
+                              }
+                              placeholder="https://... (image/gif/video url)"
+                              className="h-10 border-[#C8D7E9] rounded-lg bg-white text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 border-[#C8D7E9] bg-white"
+                              onClick={() => {
+                                const url = String(draft?.recovery?.mediaUrlDraft ?? "").trim();
+                                if (!url) return;
+                                addRecoveryMediaUrls([url]);
+                                setDraft((d) => ({
+                                  ...d,
+                                  recovery: { ...d.recovery, mediaUrlDraft: "" },
+                                }));
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                          <p className="mt-2 text-[11px] text-muted-foreground">
+                            Use this when media is hosted (CDN/S3).
+                          </p>
+                        </div> */}
+                      </div>
+
+                      {(draft?.recovery?.mediaUrls?.length ?? 0) > 0 ? (
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {(draft.recovery.mediaUrls ?? []).slice(0, 8).map((url, idx) => {
+                            const preview = recoveryMediaPreviews?.[idx];
+                            const isVideo =
+                              String(preview?.type ?? "").startsWith("video/") ||
+                              /\.(mp4|webm|ogg)(\?|#|$)/i.test(String(url));
+                            const isImage =
+                              String(preview?.type ?? "").startsWith("image/") ||
+                              /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(String(url));
+                            return (
+                              <div
+                                key={`${url}-${idx}`}
+                                className="relative overflow-hidden rounded-xl border border-[#C8D7E9] bg-white shadow-sm"
+                              >
+                                <div className="absolute right-2 top-2 z-10">
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 bg-white/85 hover:bg-white text-[#B91C1C]"
+                                    onClick={() => removeRecoveryMediaAt(idx)}
+                                    aria-label="Remove media"
+                                  >
+                                    <HiOutlineTrash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="aspect-video bg-muted/20 flex items-center justify-center">
+                                  {isVideo ? (
+                                    <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#2158A3]">
+                                      VIDEO
+                                    </div>
+                                  ) : isImage ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={url} alt="Recovery media" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <div className="p-3 text-xs text-muted-foreground break-all">{url}</div>
+                                  )}
+                                </div>
+                                <div className="px-3 py-2 text-xs text-muted-foreground break-all">
+                                  {preview?.name ?? url}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -450,7 +450,7 @@ export default function Dashboard() {
     { label: "Subscription", href: "/subscription" },
     { label: "Active Users Today", href: "/active-users-today" },
     { label: "Settings", href: "/settings" },
-    { label: "Onboarding", href: "/onboarding" },
+    // { label: "Onboarding", href: "/onboarding" },
 
   ];
 
@@ -897,7 +897,7 @@ export default function Dashboard() {
             isIncrease={true}
             para={`${timeframeLabelMap[timeframe]} revenue from subscriptions` ?? "All time subscription revenue"}
             isCurrency
-            currency="INR"
+            currency="USDT"
             icon={LuApple}
             iconBg="bg-indigo-500/10"
             iconColor="text-indigo-700"

@@ -323,7 +323,7 @@ export default function ViewFitnessProgramPage() {
 
         {detail?.workouts && (
           <div className="space-y-6">
-            <h2 className="text-sm font-semibold text-[#0A3161] px-1">Part 2: Exercise library (workouts A / B / C)</h2>
+            <h2 className="text-sm font-semibold text-[#0A3161] px-1">Part 2: Workout library (workouts A / B / C)</h2>
             {[
               { letter: "A", label: "Workout A — Beginner Legs (Monday)" },
               { letter: "B", label: "Workout B — Beginner Upper (Wednesday)" },

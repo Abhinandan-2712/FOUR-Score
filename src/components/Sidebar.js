@@ -86,11 +86,11 @@ export default function Sidebar() {
       label: "Subscription",
       icon: HiOutlineCreditCard,
     },
-    {
-      href: "/onboarding",
-      label: "Onboarding",
-      icon: HiOutlineClipboardList,
-    },
+    // {
+    //   href: "/onboarding",
+    //   label: "Onboarding",
+    //   icon: HiOutlineClipboardList,
+    // },
     // { 
     //   href: "/unity-community", 
     //   label: "Unity (Community)", 
