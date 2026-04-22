@@ -1,4 +1,8 @@
+"use client";
+
 // AdminLayout.jsx
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
@@ -29,6 +33,20 @@ import ScrollToTopOnRouteChange from "@/components/ScrollToTopOnRouteChange";
 
 
 export default function AdminLayout({ children }) {
+  const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    setIsCheckingAuth(false);
+  }, [router]);
+
+  if (isCheckingAuth) return null;
+
   return (
     <div className="admin-shell text-foreground">
       <ScrollToTopOnRouteChange />

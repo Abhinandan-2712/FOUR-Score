@@ -21,6 +21,8 @@ import { fetchAllFaqs, deleteFaqById } from "@/lib/faqApi";
 import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
+const faqSelectClass =
+  "h-11 w-full appearance-none rounded-xl border border-[#C8D7E9] bg-white pl-3 pr-9 text-sm font-medium text-[#0A3161] shadow-sm outline-none transition focus:border-[#0A3161]/45 focus:ring-2 focus:ring-[#0A3161]/20";
 
 function stripHtmlToText(input) {
   if (input == null) return "";
@@ -217,21 +219,26 @@ export default function FaqPage() {
 
           <div className="flex items-center gap-2 md:ml-auto">
             <span className="text-sm font-medium text-[#0A3161]">Category:</span>
-            <select
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 rounded-md border border-[#C8D7E9] bg-white px-3 text-sm text-[#0A3161] outline-none focus:ring-2 focus:ring-[#0A3161]/30"
-            >
-              <option value="all">All</option>
-              {categoryOptions.map((c) => (
-                <option key={c} value={c.toLowerCase()}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <div className="relative min-w-[160px]">
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className={faqSelectClass}
+              >
+                <option value="all">All</option>
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c.toLowerCase()}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#2158A3]">
+                ▾
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -337,20 +344,25 @@ export default function FaqPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span>Rows per page:</span>
-            <select
-              className="border border-[#C8D7E9] rounded-md px-2 py-1 bg-white text-sm outline-none focus:ring-2 focus:ring-[#0A3161]/30"
-              value={rowsPerPage}
-              onChange={(e) => {
-                setRowsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              {[6, 10, 25, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-[120px]">
+              <select
+                className={faqSelectClass}
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                {[6, 10, 25, 50].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#2158A3]">
+                ▾
+              </span>
+            </div>
           </div>
         </div>
 

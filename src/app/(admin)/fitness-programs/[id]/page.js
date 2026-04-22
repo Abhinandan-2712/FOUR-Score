@@ -46,6 +46,14 @@ function BulletBlock({ title, text }) {
   );
 }
 
+function getLevelBadgeClass(level) {
+  const key = String(level ?? "").toLowerCase();
+  if (key.includes("beginner")) return "border-sky-200 bg-sky-50 text-sky-800";
+  if (key.includes("intermediate")) return "border-amber-200 bg-amber-50 text-amber-800";
+  if (key.includes("advanced")) return "border-rose-200 bg-rose-50 text-rose-800";
+  return "border-[#E8EEF4] bg-[#FAFCFF] text-[#0A3161]";
+}
+
 export default function ViewFitnessProgramPage() {
   const router = useRouter();
   const params = useParams();
@@ -211,7 +219,14 @@ export default function ViewFitnessProgramPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-8">
             <div className="rounded-xl border border-[#E8EEF4] bg-[#FAFCFF] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#5671A6]">Level</p>
-              <p className="mt-1 text-sm font-medium text-[#0A3161]">{(detail ?? summary).level}</p>
+              <span
+                className={[
+                  "mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                  getLevelBadgeClass((detail ?? summary).level),
+                ].join(" ")}
+              >
+                {(detail ?? summary).level}
+              </span>
             </div>
             <div className="rounded-xl border border-[#E8EEF4] bg-[#FAFCFF] px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#5671A6]">Duration</p>

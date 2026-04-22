@@ -150,7 +150,7 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <div className="mt-6 border-t border-border pt-4">
+      {/* <div className="mt-6 border-t border-border pt-4">
         <p className="text-xs text-muted-foreground">
           <a href="/term-contions" className="font-medium text-foreground/70 underline-offset-4 hover:text-foreground hover:underline">
             Terms of Use
@@ -160,7 +160,7 @@ export default function LoginPage() {
             Privacy Policy
           </a>
         </p>
-      </div>
+      </div> */}
     </>
   );
 }

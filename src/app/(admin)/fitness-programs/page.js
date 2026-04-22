@@ -31,6 +31,14 @@ import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const DEFAULT_ROWS_PER_PAGE = 6;
 
+const getLevelBadgeClass = (level) => {
+  const key = String(level ?? "").toLowerCase();
+  if (key.includes("beginner")) return "border-sky-200 bg-sky-50 text-sky-800";
+  if (key.includes("intermediate")) return "border-amber-200 bg-amber-50 text-amber-800";
+  if (key.includes("advanced")) return "border-rose-200 bg-rose-50 text-rose-800";
+  return "border-primary/15 bg-primary/8 text-primary";
+};
+
 export default function FitnessProgramsPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
@@ -245,7 +253,12 @@ export default function FitnessProgramsPage() {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <span className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    <span
+                      className={[
+                        "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                        getLevelBadgeClass(p.level),
+                      ].join(" ")}
+                    >
                       {p.level}
                     </span>
                   </TableCell>

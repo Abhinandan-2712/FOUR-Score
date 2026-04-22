@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
 
 const labelCls = "block text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+const DEFAULT_PERIOD_DAYS = 30;
+const MAX_PERIOD_DAYS = 365;
 
 const DEFAULT_ACCESS = { fitnessPrograms: true };
 
@@ -33,7 +35,7 @@ const INITIAL_PLANS = [
     name: "Basic",
     tagline: "Perfect to get started",
     price: "$9.99",
-    period: "/month",
+    period: "30 days",
     features: ["Basic workouts", "Diet tracking", "Progress tracker", "Email support"],
     access: DEFAULT_ACCESS,
     accessItems: DEFAULT_ACCESS_ITEMS,
@@ -43,7 +45,7 @@ const INITIAL_PLANS = [
     name: "Premium",
     tagline: "Perfect to get started",
     price: "$19.99",
-    period: "/month",
+    period: "30 days",
     features: ["All Basic +", "Advanced programs", "Meal plans", "Video tutorials", "Priority support"],
     access: DEFAULT_ACCESS,
     accessItems: DEFAULT_ACCESS_ITEMS,
@@ -53,7 +55,7 @@ const INITIAL_PLANS = [
     name: "Pro",
     tagline: "Perfect to get started",
     price: "$29.99",
-    period: "/month",
+    period: "30 days",
     features: ["All Premium +", "Personal coaching", "Custom plans", "Nutrition consult", "Analytics"],
     access: DEFAULT_ACCESS,
     accessItems: DEFAULT_ACCESS_ITEMS,
@@ -80,7 +82,10 @@ function planToDraft(plan) {
     name: plan?.name ?? "",
     tagline: plan?.tagline ?? "",
     price: plan?.price ?? "",
-    period: plan?.period ?? "/month",
+    period: String(
+      Number.parseInt(String(plan?.period ?? DEFAULT_PERIOD_DAYS).replace(/[^\d]/g, ""), 10) ||
+        DEFAULT_PERIOD_DAYS
+    ),
     featuresText: (plan?.features ?? []).join("\n"),
     access,
     accessItems,
@@ -357,7 +362,11 @@ export default function SubscriptionAdminPage() {
     const name = d.name.trim();
     const tagline = d.tagline.trim() || "Perfect to get started";
     const price = d.price.trim();
-    const period = d.period.trim() || "/month";
+    const parsedDays = Number.parseInt(String(d.period ?? "").replace(/[^\d]/g, ""), 10);
+    const periodDays = Number.isFinite(parsedDays)
+      ? Math.max(1, Math.min(MAX_PERIOD_DAYS, parsedDays))
+      : DEFAULT_PERIOD_DAYS;
+    const period = `${periodDays} days`;
     const features = d.featuresText
       .split("\n")
       .map((f) => f.trim())
@@ -405,10 +414,23 @@ export default function SubscriptionAdminPage() {
     if (!name || !price) return "Plan name and price are required.";
     if (String(name).length > 50) return "Plan name must be 50 characters or less.";
     if (!isValidPrice(price)) return "Enter a valid price (1 - 99999.99, up to 2 decimals).";
+    const periodDays = Number.parseInt(String(draft?.period ?? "").replace(/[^\d]/g, ""), 10);
+    if (!Number.isFinite(periodDays) || periodDays < 1 || periodDays > MAX_PERIOD_DAYS) {
+      return `Period must be between 1 and ${MAX_PERIOD_DAYS} days.`;
+    }
     if (!features?.length) return "Add at least one feature.";
     const idBase = makePlanId(name);
     if (!idBase) return "Enter a valid plan name.";
     return null;
+  };
+
+  const sanitizePeriodDaysInput = (value) => {
+    let v = String(value ?? "").replace(/[^\d]/g, "");
+    if (!v) return "";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "";
+    if (n > MAX_PERIOD_DAYS) return String(MAX_PERIOD_DAYS);
+    return String(Math.max(1, n));
   };
 
   const handleCreatePlan = () => {
@@ -559,7 +581,7 @@ export default function SubscriptionAdminPage() {
               <div className="px-5 py-4 bg-gradient-to-r from-emerald-50/70 via-background to-amber-50/30 dark:from-emerald-950/25 dark:via-background dark:to-amber-950/10 border-b border-border">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{p.name}</p>
+                    <p className="text-sm font-semibold break-all line-clamp-2">{p.name}</p>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{p.tagline}</p>
                   </div>
                   <div className="text-right shrink-0">
@@ -663,7 +685,7 @@ export default function SubscriptionAdminPage() {
                       <div className="rounded-2xl border border-border bg-muted/20 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-base font-semibold">{draft.name || "—"}</p>
+                            <p className="text-base font-semibold break-all">{draft.name || "—"}</p>
                             <p className="text-sm text-muted-foreground mt-1">{draft.tagline || "—"}</p>
                           </div>
                           <div className="text-right shrink-0">
@@ -761,11 +783,16 @@ export default function SubscriptionAdminPage() {
                         />
                       </div>
                       <div>
-                        <label className={labelCls}>Period</label>
+                        <label className={labelCls}>Period (days)</label>
                         <Input
+                          type="number"
+                          min={1}
+                          max={MAX_PERIOD_DAYS}
                           value={draft.period}
-                          onChange={(e) => setDraft((p) => ({ ...p, period: e.target.value }))}
-                          placeholder="/month"
+                          onChange={(e) =>
+                            setDraft((p) => ({ ...p, period: sanitizePeriodDaysInput(e.target.value) }))
+                          }
+                          placeholder="30"
                           className="mt-1.5"
                         />
                       </div>

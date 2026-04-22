@@ -5,6 +5,14 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FaTrashAlt } from "react-icons/fa";
 
+const getLevelBadgeClass = (level) => {
+  const key = String(level ?? "").toLowerCase();
+  if (key.includes("beginner")) return "bg-sky-50 text-sky-800 border-sky-200";
+  if (key.includes("intermediate")) return "bg-amber-50 text-amber-800 border-amber-200";
+  if (key.includes("advanced")) return "bg-rose-50 text-rose-800 border-rose-200";
+  return "bg-blue-50 text-blue-800 border-blue-100";
+};
+
 export default function DeleteProgramModal({ open, program, onCancel, onConfirm, isDeleting }) {
   if (!open || !program) return null;
 
@@ -61,7 +69,12 @@ export default function DeleteProgramModal({ open, program, onCancel, onConfirm,
             ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               {program.level ? (
-                <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-800 px-3 py-1 font-medium border border-blue-100">
+                <span
+                  className={[
+                    "inline-flex items-center rounded-full px-3 py-1 font-medium border",
+                    getLevelBadgeClass(program.level),
+                  ].join(" ")}
+                >
                   {program.level}
                 </span>
               ) : null}

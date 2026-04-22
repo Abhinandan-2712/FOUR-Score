@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import {
   Table,
@@ -67,6 +67,7 @@ export default function FeedbackPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasShownDemoToast, setHasShownDemoToast] = useState(false);
+  const updateLockRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
@@ -74,7 +75,7 @@ export default function FeedbackPage() {
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
       if (!baseUrl) {
         if (!hasShownDemoToast) {
-          toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL). Showing demo feedback for now.", {
+          toast.error("Feedback service is not configured yet. Showing sample feedback for preview.", {
             id: "feedback-missing-base-url",
           });
           setHasShownDemoToast(true);
@@ -85,7 +86,9 @@ export default function FeedbackPage() {
       }
       if (!token) {
         if (!hasShownDemoToast) {
-          toast.error("Session expired. Showing demo feedback for now.", { id: "feedback-missing-token" });
+          toast.error("Could not verify your session. Showing sample feedback for preview.", {
+            id: "feedback-missing-token",
+          });
           setHasShownDemoToast(true);
         }
         setItems(MOCK_FEEDBACK);
@@ -98,11 +101,9 @@ export default function FeedbackPage() {
         setItems(Array.isArray(list) && list.length ? list : MOCK_FEEDBACK);
       } catch (err) {
         console.error("Load feedback failed:", err?.adminPayload || err?.message);
-        toast.error(
-          (err?.adminPayload?.message || err?.message || "Failed to load feedback") +
-            " — showing demo feedback for now.",
-          { id: "feedback-load-failed" }
-        );
+        toast.error("Feedback is temporarily unavailable. Showing sample feedback for preview.", {
+          id: "feedback-load-failed",
+        });
         setItems(MOCK_FEEDBACK);
       } finally {
         setIsFetching(false);
@@ -167,6 +168,7 @@ export default function FeedbackPage() {
   };
 
   const toggleResolved = async (row) => {
+    if (updateLockRef.current || isUpdating) return;
     const token = localStorage.getItem("token");
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
     if (!baseUrl) {
@@ -177,6 +179,7 @@ export default function FeedbackPage() {
       toast.error("Session expired. Please login again.", { id: "feedback-missing-token" });
       return;
     }
+    updateLockRef.current = true;
     setIsUpdating(true);
     try {
       const nextResolved = row.status !== "Resolved";
@@ -192,6 +195,7 @@ export default function FeedbackPage() {
       });
     } finally {
       setIsUpdating(false);
+      updateLockRef.current = false;
     }
   };
 

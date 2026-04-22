@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +96,7 @@ export default function FitnessProgramEditorForm({
   wizardMode = false,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const contentTopRef = useRef(null);
   /** Highest tab index (0–3) the user may open; unlocked by Next */
   const [furthestStep, setFurthestStep] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -137,6 +138,13 @@ export default function FitnessProgramEditorForm({
   useEffect(() => {
     // Clear the "advance" latch once the UI has moved.
     if (isAdvancing) setIsAdvancing(false);
+    // Ensure each step opens from top when switching tabs.
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+    contentTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -461,11 +469,12 @@ export default function FitnessProgramEditorForm({
         })}
       </div>
 
-      <div className="mt-6 rounded-2xl border border-[#C8D7E9] bg-white shadow-md overflow-hidden">
+      <div ref={contentTopRef} className="mt-6 rounded-2xl border border-[#C8D7E9] bg-white shadow-md overflow-hidden">
         <div className="p-6 md:p-8 min-h-[280px] bg-[linear-gradient(180deg,#FAFCFF_0%,#FFFFFF_35%)]">
           {activeTab === "overview" && (
-            <div className="space-y-6 max-w-6xl">
-              <p className="text-sm text-[#5671A6] -mt-1 leading-relaxed border-l-4 border-[#2158A3]/35 pl-4">
+            <div className="max-w-6xl rounded-2xl border border-[#DDE8F5] bg-[#F8FBFF]/50 p-4 md:p-5">
+              <div className="space-y-6">
+              <p className="text-sm text-[#5671A6] leading-relaxed border-l-4 border-[#2158A3]/35 pl-4">
                 {wizardMode ? (
                   <>
                     Section order matches the PDF: marketing copy first, then{" "}
@@ -693,12 +702,13 @@ export default function FitnessProgramEditorForm({
                   </div>
                 </div>
               </FormSection>
+              </div>
             </div>
           )}
 
           {activeTab === "schedule" && (
-            <div className="space-y-4 w-full">
-              <p className="text-sm text-[#5671A6] -mt-1 w-full max-w-none leading-relaxed">
+            <div className="w-full rounded-2xl border border-[#DDE8F5] bg-[#F8FBFF]/50 p-4 md:p-5">
+              <p className="text-sm text-[#5671A6] mb-3 w-full max-w-none leading-relaxed">
                 <span className="font-medium text-[#2158A3]">Part 1: The 4-week logic grid</span> — PDF: set global
                 rules for what the user sees each day. The app iterates sets/reps by week while keeping exercise lists
                 constant for the block.
@@ -709,10 +719,10 @@ export default function FitnessProgramEditorForm({
                 icon={<HiOutlineCalendar />}
                 tone="slate"
               >
-                <p className="text-xs text-[#5671A6] -mt-1 mb-1">
+                <p className="text-xs text-[#5671A6] mb-2">
                   Scroll horizontally on small screens. Week column stays pinned while you edit.
                 </p>
-                <div className="overflow-x-auto rounded-xl border border-[#C8D7E9] bg-[#FAFCFF]/40 shadow-inner">
+                <div className="overflow-x-auto rounded-xl border border-[#C8D7E9] bg-white p-2 shadow-inner md:p-3">
                   <Table className="min-w-[720px]">
                     <TableHeader>
                       <TableRow className="bg-[#F2F5FA] hover:bg-[#F2F5FA] border-b border-[#D9E8F5]">
@@ -940,18 +950,18 @@ export default function FitnessProgramEditorForm({
           )}
 
           {activeTab === "recovery" && (
-            <div className="space-y-4 w-full max-w-6xl">
-              <p className="text-sm text-[#5671A6] -mt-2 mb-2 w-full max-w-none leading-relaxed">
+            <div className="w-full max-w-6xl rounded-2xl border border-[#DDE8F5] bg-[#F8FBFF]/50 p-4 md:p-5">
+              <p className="text-sm text-[#5671A6] mb-2 w-full max-w-none leading-relaxed">
                 <span className="font-medium text-[#2158A3]">Part 3: Active recovery protocol (Tue / Thu)</span> — PDF:
                 two blocks for recovery days — Block 1 LISS cardio (duration, prompt, options), then Block 2 “Big 4”
                 stretches in order.
               </p>
-              <p className="text-sm text-[#5671A6] mb-2">
+              <p className="text-sm text-[#5671A6] mb-4">
                 Flow: <span className="font-medium text-[#2158A3]">LISS first</span>, then{" "}
                 <span className="font-medium text-[#2158A3]">stretches in order</span>.
               </p>
 
-              <div className="flex flex-col lg:flex-row gap-6 lg:items-stretch">
+              <div className="flex flex-col lg:flex-row gap-5 lg:items-stretch mb-10">
                 <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-[#C8D7E9] bg-white shadow-sm overflow-hidden h-full">
                   <div className="flex flex-wrap items-center gap-3 px-5 py-4 bg-gradient-to-r from-sky-50 via-white to-emerald-50/80 border-b border-[#D9E8F5]">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 shadow-sm">
@@ -1147,7 +1157,7 @@ export default function FitnessProgramEditorForm({
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-[#C8D7E9] bg-white shadow-sm overflow-hidden h-full">
+                <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-[#C8D7E9] bg-white shadow-sm overflow-hidden h-full pb-7">
                   <div className="flex flex-wrap items-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-50 via-white to-amber-50/60 border-b border-[#E5EDE5]">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 shadow-sm">
                       <FaLeaf className="h-5 w-5" />
@@ -1157,60 +1167,62 @@ export default function FitnessProgramEditorForm({
                       <p className="text-xs text-[#5671A6]">Ordered steps after cardio — name + detail/duration per line</p>
                     </div>
                   </div>
-                  <div className="p-5 md:p-6 space-y-4">
-                    {draft.recovery.stretches.map((s, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-2 sm:gap-3 rounded-xl border border-[#D4E4D4] bg-[#FAFDF8] p-3 sm:p-4 shadow-sm"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A3161] text-xs font-bold text-white">
-                          {i + 1}
-                        </div>
-                        <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
-                          <div>
-                            <label className={lbl}>Stretch name</label>
-                            <Input
-                              value={s.name}
-                              onChange={(e) => updateStretch(i, "name", e.target.value)}
-                              className="mt-1.5 h-10 border-[#C8D7E9] bg-white rounded-lg"
-                            />
-                          </div>
-                          <div>
-                            <label className={lbl}>Detail / duration</label>
-                            <Input
-                              value={s.detail}
-                              onChange={(e) => updateStretch(i, "detail", e.target.value)}
-                              className="mt-1.5 h-10 border-[#C8D7E9] bg-white rounded-lg"
-                              placeholder="e.g. 1m per side"
-                            />
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 shrink-0 text-[#B91C1C] hover:bg-red-50 hover:text-[#991B1B] disabled:opacity-40"
-                          disabled={draft.recovery.stretches.length <= 1}
-                          onClick={() => removeStretch(i)}
-                          aria-label="Delete stretch"
-                          title={
-                            draft.recovery.stretches.length <= 1
-                              ? "At least one stretch required"
-                              : "Delete stretch"
-                          }
+                  <div className="p-5 md:p-6">
+                    <div className="max-h-[520px] overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin] [scrollbar-color:rgba(10,49,97,0.28)_transparent] dark:[scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-900/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-slate-900/30 dark:hover:[&::-webkit-scrollbar-thumb]:bg-white/30">
+                      {draft.recovery.stretches.map((s, i) => (
+                        <div
+                          key={i}
+                          className="flex gap-2 sm:gap-3 rounded-xl border border-[#D4E4D4] bg-[#FAFDF8] p-3 shadow-sm"
                         >
-                          <HiOutlineTrash className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full border-dashed border-[#C8D7E9] text-[#2158A3] hover:bg-[#F2F5FA]"
-                      onClick={addStretch}
-                    >
-                      + Add stretch
-                    </Button>
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A3161] text-xs font-bold text-white">
+                            {i + 1}
+                          </div>
+                          <div className="grid min-w-0 flex-1 gap-2.5 sm:grid-cols-2">
+                            <div>
+                              <label className={lbl}>Stretch name</label>
+                              <Input
+                                value={s.name}
+                                onChange={(e) => updateStretch(i, "name", e.target.value)}
+                                className="mt-1 h-10 border-[#C8D7E9] bg-white rounded-lg"
+                              />
+                            </div>
+                            <div>
+                              <label className={lbl}>Detail / duration</label>
+                              <Input
+                                value={s.detail}
+                                onChange={(e) => updateStretch(i, "detail", e.target.value)}
+                                className="mt-1 h-10 border-[#C8D7E9] bg-white rounded-lg"
+                                placeholder="e.g. 1m per side"
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0 text-[#B91C1C] hover:bg-red-50 hover:text-[#991B1B] disabled:opacity-40"
+                            disabled={draft.recovery.stretches.length <= 1}
+                            onClick={() => removeStretch(i)}
+                            aria-label="Delete stretch"
+                            title={
+                              draft.recovery.stretches.length <= 1
+                                ? "At least one stretch required"
+                                : "Delete stretch"
+                            }
+                          >
+                            <HiOutlineTrash className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-dashed border-[#C8D7E9] text-[#2158A3] hover:bg-[#F2F5FA]"
+                        onClick={addStretch}
+                      >
+                        + Add stretch
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
