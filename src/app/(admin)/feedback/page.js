@@ -168,33 +168,37 @@ export default function FeedbackPage() {
   };
 
   const toggleResolved = async (row) => {
-    if (updateLockRef.current || isUpdating) return;
-    const token = localStorage.getItem("token");
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-    if (!baseUrl) {
-      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", { id: "feedback-missing-base-url" });
-      return;
-    }
-    if (!token) {
-      toast.error("Session expired. Please login again.", { id: "feedback-missing-token" });
-      return;
-    }
+    if (updateLockRef.current) return;
     updateLockRef.current = true;
-    setIsUpdating(true);
     try {
-      const nextResolved = row.status !== "Resolved";
-      await setFeedbackResolved(row.id, nextResolved, { token, baseUrl });
-      toast.success(nextResolved ? "Marked as resolved." : "Reopened feedback.", {
-        id: `feedback-updated:${row.id}`,
-      });
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      console.error("Update feedback failed:", err?.adminPayload || err?.message);
-      toast.error(err?.adminPayload?.message || err?.message || "Failed to update feedback", {
-        id: `feedback-update-failed:${row?.id || "unknown"}`,
-      });
+      const token = localStorage.getItem("token");
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+      if (!baseUrl) {
+        toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", { id: "feedback-missing-base-url" });
+        return;
+      }
+      if (!token) {
+        toast.error("Session expired. Please login again.", { id: "feedback-missing-token" });
+        return;
+      }
+
+      setIsUpdating(true);
+      try {
+        const nextResolved = row.status !== "Resolved";
+        await setFeedbackResolved(row.id, nextResolved, { token, baseUrl });
+        toast.success(nextResolved ? "Marked as resolved." : "Reopened feedback.", {
+          id: "feedback-status-updated",
+        });
+        setRefreshKey((k) => k + 1);
+      } catch (err) {
+        console.error("Update feedback failed:", err?.adminPayload || err?.message);
+        toast.error(err?.adminPayload?.message || err?.message || "Failed to update feedback", {
+          id: "feedback-update-failed",
+        });
+      } finally {
+        setIsUpdating(false);
+      }
     } finally {
-      setIsUpdating(false);
       updateLockRef.current = false;
     }
   };
@@ -326,7 +330,8 @@ export default function FeedbackPage() {
                         type="button"
                         onClick={() => toggleResolved(row)}
                         disabled={isUpdating}
-                        className={`h-8 rounded-full px-3 text-xs font-medium border transition-colors ${
+                        aria-busy={isUpdating}
+                        className={`h-8 rounded-full px-3 text-xs font-medium border transition-colors disabled:pointer-events-none disabled:opacity-50 ${
                           row.status === "Resolved"
                             ? "bg-white text-amber-800 border-amber-200 hover:bg-amber-50"
                             : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"

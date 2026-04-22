@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,7 +96,6 @@ export default function FitnessProgramEditorForm({
   wizardMode = false,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
-  const contentTopRef = useRef(null);
   /** Highest tab index (0–3) the user may open; unlocked by Next */
   const [furthestStep, setFurthestStep] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -144,7 +143,6 @@ export default function FitnessProgramEditorForm({
     } catch {
       window.scrollTo(0, 0);
     }
-    contentTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -461,7 +459,7 @@ export default function FitnessProgramEditorForm({
               title={locked ? "Complete the previous step with Next first" : tabTitles[i]}
               onClick={() => goToTab(t.id)}
               disabled={locked}
-              className={`${tabBtn(activeTab === t.id, locked)} shrink-0`}
+              className={`${tabBtn(activeTab === t.id, locked)} shrink-0 mb-1`}
             >
               {t.label}
             </button>
@@ -469,7 +467,7 @@ export default function FitnessProgramEditorForm({
         })}
       </div>
 
-      <div ref={contentTopRef} className="mt-6 rounded-2xl border border-[#C8D7E9] bg-white shadow-md overflow-hidden">
+      <div className="mt-6 rounded-2xl border border-[#C8D7E9] bg-white shadow-md overflow-hidden">
         <div className="p-6 md:p-8 min-h-[280px] bg-[linear-gradient(180deg,#FAFCFF_0%,#FFFFFF_35%)]">
           {activeTab === "overview" && (
             <div className="max-w-6xl rounded-2xl border border-[#DDE8F5] bg-[#F8FBFF]/50 p-4 md:p-5">
