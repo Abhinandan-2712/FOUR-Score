@@ -1,6 +1,6 @@
 /**
- * Admin subscription plans — FormData + token (Express upload.none() routes).
- * GET /api/admin/get-all-plans, POST /api/admin/add-plan, /update-plan/:id, /delete-plan/:id
+ * Admin subscription plans — API routes: get-all-plans, add-plan, update-plan/:id, delete-plan/:id
+ * Tries multiple body shapes (JSON, multipart, urlencoded) because backends differ.
  */
 
 import axios from "axios";
@@ -10,6 +10,19 @@ import { buildFaqAuthHeaders } from "@/lib/faqApi";
 const DEFAULT_ACCESS = { fitnessPrograms: true };
 const DEFAULT_ACCESS_ITEMS = { fitnessPrograms: { mode: "all", ids: [] } };
 const DEFAULT_PERIOD = 30;
+
+/**
+ * If NEXT_PUBLIC_API_BASE_URL is `https://host/api`, use `https://host/api/admin/...`
+ * and NOT `https://host/api/api/admin/...`.
+ */
+export function joinAdminPath(baseUrl, pathAfterAdmin) {
+  const b = String(baseUrl).replace(/\/$/, "");
+  const r = String(pathAfterAdmin).replace(/^\//, "");
+  if (b.toLowerCase().endsWith("/api")) {
+    return `${b}/admin/${r}`;
+  }
+  return `${b}/api/admin/${r}`;
+}
 
 function assertOkResponse(res, fallbackMessage) {
   const data = res?.data ?? {};
@@ -143,30 +156,137 @@ function extractPlansFromListResponse(data) {
   return [];
 }
 
+function periodDaysFromPlan({ period, features: _f, access: _a, accessItems: _i, name, tagline, price, ..._rest }) {
+  const s = String(period ?? "");
+  const n = Number.parseInt(s.replace(/[^\d]/g, ""), 10);
+  if (Number.isFinite(n) && n > 0) return n;
+  return DEFAULT_PERIOD;
+}
+
+/**
+ * Build a body object (JSON) / fields for a plan — duplicate keys for varying backends.
+ */
+function buildPlanPayloadForApi(body) {
+  const { name, tagline, price, period, features, access, accessItems } = body;
+  const periodDays = periodDaysFromPlan(body);
+  const feat = Array.isArray(features) ? features : [];
+  const acc = access && typeof access === "object" ? access : DEFAULT_ACCESS;
+  const accIt = accessItems && typeof accessItems === "object" ? accessItems : DEFAULT_ACCESS_ITEMS;
+
+  return {
+    name: name != null ? String(name) : "",
+    planName: name != null ? String(name) : "",
+    title: name != null ? String(name) : "",
+    tagline: tagline != null ? String(tagline) : "",
+    description: tagline != null ? String(tagline) : "",
+    price: price != null ? String(price) : "",
+    amount: price != null ? String(price) : "",
+    period: period != null ? String(period) : "",
+    periodDays,
+    durationDays: periodDays,
+    features: feat,
+    access: acc,
+    accessItems: accIt,
+  };
+}
+
 function appendPlanFields(fd, { name, tagline, price, period, features, access, accessItems }) {
-  fd.append("name", name != null ? String(name) : "");
-  fd.append("tagline", tagline != null ? String(tagline) : "");
-  fd.append("price", price != null ? String(price) : "");
-  fd.append("period", period != null ? String(period) : "");
+  const built = buildPlanPayloadForApi({ name, tagline, price, period, features, access, accessItems });
+  fd.append("name", built.name);
+  fd.append("tagline", built.tagline);
+  fd.append("price", built.price);
+  fd.append("period", built.period);
+  fd.append("periodDays", String(built.periodDays));
   const featArray = Array.isArray(features) ? features : [];
   fd.append("features", JSON.stringify(featArray));
-  fd.append("access", JSON.stringify(access && typeof access === "object" ? access : DEFAULT_ACCESS));
-  fd.append("accessItems", JSON.stringify(accessItems && typeof accessItems === "object" ? accessItems : DEFAULT_ACCESS_ITEMS));
+  fd.append("access", JSON.stringify(built.access));
+  fd.append("accessItems", JSON.stringify(built.accessItems));
+  fd.append("planName", built.planName);
+  fd.append("title", built.title);
+}
+
+function appendUrlEncodedFields(params, body) {
+  const built = buildPlanPayloadForApi(body);
+  params.set("name", built.name);
+  params.set("tagline", built.tagline);
+  params.set("price", built.price);
+  params.set("period", built.period);
+  params.set("periodDays", String(built.periodDays));
+  params.set("features", JSON.stringify(built.features));
+  params.set("access", JSON.stringify(built.access));
+  params.set("accessItems", JSON.stringify(built.accessItems));
+  params.set("planName", built.planName);
+  params.set("title", built.title);
+}
+
+/**
+ * Tries: JSON (express.json) → FormData (multer upload.none) → x-www-form-urlencoded
+ */
+async function postPlanPayload(url, body, token, failMsg) {
+  const auth = buildFaqAuthHeaders(token);
+  const built = buildPlanPayloadForApi(body);
+  const strategies = [
+    () => {
+      const fd = new FormData();
+      appendPlanFields(fd, body);
+      return axios.post(url, fd, { headers: auth, timeout: 45000 });
+    },
+    () => axios.post(url, built, { headers: { ...auth, "Content-Type": "application/json" }, timeout: 45000 }),
+    () => {
+      const p = new URLSearchParams();
+      appendUrlEncodedFields(p, body);
+      return axios.post(url, p, {
+        headers: { ...auth, "Content-Type": "application/x-www-form-urlencoded" },
+        timeout: 45000,
+      });
+    },
+  ];
+
+  let lastErr;
+  for (const run of strategies) {
+    try {
+      const res = await run();
+      return assertOkResponse(res, failMsg);
+    } catch (e) {
+      if (e?.adminPayload) throw e;
+      if (e?.isAuthError) throw e;
+      const st = e?.response?.status;
+      if (st === 401 || st === 403) {
+        e.isAuthError = true;
+        throw e;
+      }
+      if (e?.response?.data && typeof e.response.data === "object" && isAdminApiErrorPayload(e.response.data)) {
+        const d = e.response.data;
+        const err = new Error(d.message || d.msg || failMsg);
+        err.adminPayload = d;
+        if (isAdminApiAuthError(d)) err.isAuthError = true;
+        throw err;
+      }
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error(failMsg);
 }
 
 export async function fetchAllSubscriptionPlans({ token, baseUrl }) {
   if (!token || !baseUrl) throw new Error("Missing token or API base URL");
   const base = String(baseUrl).replace(/\/$/, "");
   const headers = buildFaqAuthHeaders(token);
+  const listUrl = joinAdminPath(base, "get-all-plans");
 
   let res;
   try {
-    res = await axios.get(`${base}/api/admin/get-all-plans`, { headers, timeout: 30000 });
+    res = await axios.get(listUrl, {
+      headers,
+      timeout: 30000,
+      params: { _t: Date.now() },
+    });
   } catch (e) {
     if (e?.response?.status === 405 || e?.response?.status === 404) {
       const fd = new FormData();
       fd.append("_", "");
-      res = await axios.post(`${base}/api/admin/get-all-plans`, fd, { headers, timeout: 30000 });
+      res = await axios.post(listUrl, fd, { headers, timeout: 30000, params: { _t: Date.now() } });
     } else {
       throw e;
     }
@@ -186,35 +306,24 @@ export async function fetchAllSubscriptionPlans({ token, baseUrl }) {
 export async function createSubscriptionPlan(body, { token, baseUrl }) {
   if (!token || !baseUrl) throw new Error("Missing token or API base URL");
   const base = String(baseUrl).replace(/\/$/, "");
-  const fd = new FormData();
-  appendPlanFields(fd, body);
-  const res = await axios.post(`${base}/api/admin/add-plan`, fd, {
-    headers: buildFaqAuthHeaders(token),
-    timeout: 30000,
-  });
-  return assertOkResponse(res, "Failed to create plan");
+  const url = joinAdminPath(base, "add-plan");
+  return postPlanPayload(url, body, token, "Failed to create plan");
 }
 
 export async function updateSubscriptionPlan(id, body, { token, baseUrl }) {
   if (!id || !token || !baseUrl) throw new Error("Missing id, token, or API base URL");
   const base = String(baseUrl).replace(/\/$/, "");
-  const fd = new FormData();
-  appendPlanFields(fd, body);
-  const res = await axios.post(`${base}/api/admin/update-plan/${encodeURIComponent(id)}`, fd, {
-    headers: buildFaqAuthHeaders(token),
-    timeout: 30000,
-  });
-  return assertOkResponse(res, "Failed to update plan");
+  const url = `${joinAdminPath(base, "update-plan")}/${encodeURIComponent(id)}`;
+  return postPlanPayload(url, body, token, "Failed to update plan");
 }
 
 export async function deleteSubscriptionPlan(id, { token, baseUrl }) {
   if (!id || !token || !baseUrl) throw new Error("Missing id, token, or API base URL");
   const base = String(baseUrl).replace(/\/$/, "");
+  const url = `${joinAdminPath(base, "delete-plan")}/${encodeURIComponent(id)}`;
+  const auth = buildFaqAuthHeaders(token);
   const fd = new FormData();
   fd.append("_", "");
-  const res = await axios.post(`${base}/api/admin/delete-plan/${encodeURIComponent(id)}`, fd, {
-    headers: buildFaqAuthHeaders(token),
-    timeout: 30000,
-  });
+  const res = await axios.post(url, fd, { headers: auth, timeout: 30000 });
   return assertOkResponse(res, "Failed to delete plan");
 }

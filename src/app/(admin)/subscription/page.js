@@ -457,7 +457,11 @@ export default function SubscriptionAdminPage() {
       toast.success(`Plan "${parsed.name}" created.`, { id: "subscription-create-plan-success" });
       closeModal();
     } catch (e) {
-      const msg = e?.message || e?.response?.data?.message || "Failed to create plan";
+      const data = e?.response?.data;
+      const msg =
+        e?.message ||
+        (typeof data === "string" ? data : data?.message) ||
+        "Failed to create plan";
       toast.error(msg, { id: "subscription-create-plan-error" });
       if (e?.isAuthError) router.push("/login");
     } finally {
@@ -498,7 +502,11 @@ export default function SubscriptionAdminPage() {
       toast.success(`Plan "${parsed.name}" updated.`, { id: "subscription-update-plan-success" });
       closeModal();
     } catch (e) {
-      const msg = e?.message || e?.response?.data?.message || "Failed to update plan";
+      const data = e?.response?.data;
+      const msg =
+        e?.message ||
+        (typeof data === "string" ? data : data?.message) ||
+        "Failed to update plan";
       toast.error(msg, { id: "subscription-update-plan-error" });
       if (e?.isAuthError) router.push("/login");
     } finally {
@@ -759,7 +767,7 @@ export default function SubscriptionAdminPage() {
                         </ul>
                       </div>
 
-                      <div className="rounded-2xl border border-border bg-card p-4">
+                      {/* <div className="rounded-2xl border border-border bg-card p-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           Plan access
                         </p>
@@ -775,7 +783,7 @@ export default function SubscriptionAdminPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                         <Button type="button" variant="outline" onClick={closeModal}>
@@ -854,7 +862,7 @@ export default function SubscriptionAdminPage() {
                       />
                     </div>
 
-                    <div className="rounded-2xl border border-border bg-muted/10 p-4">
+                    {/* <div className="rounded-2xl border border-border bg-muted/10 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Plan access
                       </p>
@@ -917,7 +925,7 @@ export default function SubscriptionAdminPage() {
                           }
                         />
                       ) : null}
-                    </div>
+                    </div> */}
 
                     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                       <Button type="button" variant="outline" onClick={closeModal}>
