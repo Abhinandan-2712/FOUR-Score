@@ -55,9 +55,6 @@ export default function DeleteFeedbackModal({ open, feedback, isDeleting, onCanc
               {feedback.userEmail ? ` (${feedback.userEmail})` : ""}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 font-medium text-[#2158A3] border border-[#C8D7E9]">
-                Rating: {feedback.rating ?? "—"}
-              </span>
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
                   feedback.status === "Resolved"

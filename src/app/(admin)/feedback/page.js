@@ -26,7 +26,6 @@ const MOCK_FEEDBACK = [
     id: "demo-1",
     userName: "Demo User",
     userEmail: "demo.user@example.com",
-    rating: 5,
     message:
       "Great app overall — workouts are easy to follow. Would love a dark mode toggle and a way to bookmark recovery videos.",
     status: "Open",
@@ -36,7 +35,6 @@ const MOCK_FEEDBACK = [
     id: "demo-2",
     userName: "Ava K.",
     userEmail: "ava.k@example.com",
-    rating: 3,
     message:
       "The macro calculator is helpful, but the onboarding steps felt long. Can we skip some steps and edit later?",
     status: "Resolved",
@@ -46,7 +44,6 @@ const MOCK_FEEDBACK = [
     id: "demo-3",
     userName: "Rohit",
     userEmail: "rohit@example.com",
-    rating: 4,
     message:
       "Please add more beginner-friendly mobility sessions and a weekly progress summary notification.",
     status: "Open",
@@ -121,8 +118,7 @@ export default function FeedbackPage() {
       return (
         (i.userName || "").toLowerCase().includes(q) ||
         (i.userEmail || "").toLowerCase().includes(q) ||
-        (i.message || "").toLowerCase().includes(q) ||
-        String(i.rating ?? "").toLowerCase().includes(q)
+        (i.message || "").toLowerCase().includes(q)
       );
     });
     if (statusFilter === "open") list = list.filter((i) => i.status === "Open");
@@ -226,7 +222,7 @@ export default function FeedbackPage() {
 
       <div className="p-4 mt-6 bg-white rounded-lg border border-[#C8D7E9] shadow-md">
         <Input
-          placeholder="Search by user, email, message, or rating..."
+          placeholder="Search by name, email, or message..."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -265,7 +261,7 @@ export default function FeedbackPage() {
           <TableHeader className="sticky top-0 z-10 bg-[#F2F5FA]">
             <TableRow className="border-b bg-[#F2F5FA]">
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">USER</TableHead>
-              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">RATING</TableHead>
+              <TableHead className="font-semibold text-[#2158A3] px-4 py-3">USER EMAIL</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">MESSAGE</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">STATUS</TableHead>
               <TableHead className="font-semibold text-[#2158A3] px-4 py-3">CREATED AT</TableHead>
@@ -287,15 +283,12 @@ export default function FeedbackPage() {
                       <p className="font-medium text-[#0A3161] truncate" title={row.userName}>
                         {row.userName || "—"}
                       </p>
-                      <p className="text-xs text-[#2158A3] truncate" title={row.userEmail}>
-                        {row.userEmail || "—"}
-                      </p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-medium text-[#2158A3] border border-[#C8D7E9]">
-                      {row.rating ?? "—"}
-                    </span>
+                  <TableCell className="px-4 py-3 max-w-[240px]">
+                    <p className="text-sm text-[#2158A3] truncate" title={row.userEmail || ""}>
+                      {row.userEmail || "—"}
+                    </p>
                   </TableCell>
                   <TableCell className="px-4 py-3 max-w-[520px]">
                     <div className="fs-line-clamp-3 text-sm text-[#0A3161]" title={row.message}>

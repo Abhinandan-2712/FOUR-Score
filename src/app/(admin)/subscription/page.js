@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import AdminHeaderCard from "@/components/admin/AdminHeaderCard";
+import {
+  createSubscriptionPlan,
+  deleteSubscriptionPlan,
+  fetchAllSubscriptionPlans,
+  updateSubscriptionPlan,
+} from "@/lib/subscriptionPlanApi";
 
 const labelCls = "block text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 const DEFAULT_PERIOD_DAYS = 30;
@@ -28,39 +34,6 @@ const DEFAULT_ACCESS = { fitnessPrograms: true };
 const DEFAULT_ACCESS_ITEMS = {
   fitnessPrograms: { mode: "all", ids: [] },
 };
-
-const INITIAL_PLANS = [
-  {
-    id: "basic",
-    name: "Basic",
-    tagline: "Perfect to get started",
-    price: "$9.99",
-    period: "30 days",
-    features: ["Basic workouts", "Diet tracking", "Progress tracker", "Email support"],
-    access: DEFAULT_ACCESS,
-    accessItems: DEFAULT_ACCESS_ITEMS,
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    tagline: "Perfect to get started",
-    price: "$19.99",
-    period: "30 days",
-    features: ["All Basic +", "Advanced programs", "Meal plans", "Video tutorials", "Priority support"],
-    access: DEFAULT_ACCESS,
-    accessItems: DEFAULT_ACCESS_ITEMS,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    tagline: "Perfect to get started",
-    price: "$29.99",
-    period: "30 days",
-    features: ["All Premium +", "Personal coaching", "Custom plans", "Nutrition consult", "Analytics"],
-    access: DEFAULT_ACCESS,
-    accessItems: DEFAULT_ACCESS_ITEMS,
-  },
-];
 
 function makePlanId(name) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -233,9 +206,10 @@ function AccessItemPicker({
 
 export default function SubscriptionAdminPage() {
   const router = useRouter();
-  const [plans, setPlans] = useState(INITIAL_PLANS);
-  const [selected, setSelected] = useState("basic");
+  const [plans, setPlans] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [modal, setModal] = useState({ open: false, mode: "add", planId: null });
   const [draft, setDraft] = useState(planToDraft(null));
@@ -243,9 +217,52 @@ export default function SubscriptionAdminPage() {
   const [fitnessProgramOptions, setFitnessProgramOptions] = useState([]);
   const [isLoadingAccessLists, setIsLoadingAccessLists] = useState(false);
 
+  const getApiContext = useCallback(() => {
+    const token = localStorage.getItem("token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+    if (!baseUrl) {
+      toast.error("API base URL is missing (NEXT_PUBLIC_API_BASE_URL).", { id: "subscription-missing-api-url" });
+      return null;
+    }
+    if (!token) {
+      toast.error("Session expired. Please login again.", { id: "subscription-missing-token" });
+      return null;
+    }
+    return { token, baseUrl };
+  }, []);
+
+  const loadPlans = useCallback(async () => {
+    const ctx = getApiContext();
+    if (!ctx) {
+      setIsLoadingPlans(false);
+      return;
+    }
+    setIsLoadingPlans(true);
+    try {
+      const list = await fetchAllSubscriptionPlans(ctx);
+      setPlans(list);
+      setSelected((prev) => {
+        if (list.length === 0) return null;
+        if (prev && list.some((p) => p.id === prev)) return prev;
+        return list[0].id;
+      });
+    } catch (err) {
+      console.error("Load plans failed:", err?.response?.data || err?.message);
+      const msg = err?.message || err?.response?.data?.message || "Failed to load plans";
+      toast.error(msg, { id: "subscription-load-plans" });
+      if (err?.isAuthError) router.push("/login");
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  }, [getApiContext, router]);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
 
   useEffect(() => {
     if (!modal.open) return;
@@ -322,19 +339,6 @@ export default function SubscriptionAdminPage() {
 
   const totalPlans = plans.length;
   const selectedPlan = useMemo(() => plans.find((p) => p.id === selected) ?? null, [plans, selected]);
-
-  const onConfirm = async (planId) => {
-    setIsSaving(true);
-    try {
-      // Hook your API call here.
-      await new Promise((r) => setTimeout(r, 500));
-      toast.success(`Selected plan: ${planId}`);
-    } catch (e) {
-      toast.error(e?.message || "Failed to update plan");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const openAdd = () => {
     setDraft(planToDraft(null));
@@ -433,25 +437,35 @@ export default function SubscriptionAdminPage() {
     return String(Math.max(1, n));
   };
 
-  const handleCreatePlan = () => {
+  const handleCreatePlan = async () => {
     const parsed = normalizeDraftToPlan(draft);
     const err = validatePlan(parsed);
     if (err) return toast.error(err, { id: "subscription-create-plan-validation" });
 
-    const idBase = makePlanId(parsed.name);
-    if (plans.some((p) => p.id === idBase || p.name.toLowerCase() === parsed.name.toLowerCase())) {
+    if (plans.some((p) => p.name.toLowerCase() === parsed.name.toLowerCase())) {
       toast.error("Plan with this name already exists.", { id: "subscription-create-plan-duplicate" });
       return;
     }
 
-    const createdPlan = { id: idBase, ...parsed };
-    setPlans((prev) => [...prev, createdPlan]);
-    setSelected(createdPlan.id);
-    toast.success(`Plan "${parsed.name}" created.`, { id: "subscription-create-plan-success" });
-    closeModal();
+    const ctx = getApiContext();
+    if (!ctx) return;
+
+    setIsSaving(true);
+    try {
+      await createSubscriptionPlan(parsed, ctx);
+      await loadPlans();
+      toast.success(`Plan "${parsed.name}" created.`, { id: "subscription-create-plan-success" });
+      closeModal();
+    } catch (e) {
+      const msg = e?.message || e?.response?.data?.message || "Failed to create plan";
+      toast.error(msg, { id: "subscription-create-plan-error" });
+      if (e?.isAuthError) router.push("/login");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleUpdatePlan = () => {
+  const handleUpdatePlan = async () => {
     if (!modal.planId) return;
     const existing = plans.find((p) => p.id === modal.planId);
     if (!existing) return;
@@ -460,29 +474,36 @@ export default function SubscriptionAdminPage() {
     const err = validatePlan(parsed);
     if (err) return toast.error(err, { id: "subscription-update-plan-validation" });
 
-    const nextId = makePlanId(parsed.name);
-    if (!nextId) {
+    const idBase = makePlanId(parsed.name);
+    if (!idBase) {
       toast.error("Enter a valid plan name.", { id: "subscription-update-plan-invalid-name" });
       return;
     }
 
     const nameClash = plans.some(
-      (p) =>
-        p.id !== existing.id &&
-        (p.id === nextId || p.name.toLowerCase() === parsed.name.toLowerCase())
+      (p) => p.id !== existing.id && p.name.toLowerCase() === parsed.name.toLowerCase()
     );
     if (nameClash) {
       toast.error("Another plan with this name already exists.", { id: "subscription-update-plan-duplicate" });
       return;
     }
 
-    setPlans((prev) =>
-      prev.map((p) => (p.id === existing.id ? { ...p, id: nextId, ...parsed } : p))
-    );
+    const ctx = getApiContext();
+    if (!ctx) return;
 
-    if (selected === existing.id) setSelected(nextId);
-    toast.success(`Plan "${parsed.name}" updated.`, { id: "subscription-update-plan-success" });
-    closeModal();
+    setIsSaving(true);
+    try {
+      await updateSubscriptionPlan(existing.id, parsed, ctx);
+      await loadPlans();
+      toast.success(`Plan "${parsed.name}" updated.`, { id: "subscription-update-plan-success" });
+      closeModal();
+    } catch (e) {
+      const msg = e?.message || e?.response?.data?.message || "Failed to update plan";
+      toast.error(msg, { id: "subscription-update-plan-error" });
+      if (e?.isAuthError) router.push("/login");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const requestDeletePlan = (planId) => {
@@ -495,19 +516,28 @@ export default function SubscriptionAdminPage() {
     setDeleteModal({ open: true, planId });
   };
 
-  const confirmDeletePlan = () => {
+  const confirmDeletePlan = async () => {
     const planId = deleteModal.planId;
     if (!planId) return;
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
 
-    const nextPlans = plans.filter((p) => p.id !== planId);
-    setPlans(nextPlans);
-    if (selected === planId) {
-      setSelected(nextPlans[0]?.id || "");
+    const ctx = getApiContext();
+    if (!ctx) return;
+
+    setIsSaving(true);
+    try {
+      await deleteSubscriptionPlan(planId, ctx);
+      await loadPlans();
+      toast.success(`Plan "${plan.name}" deleted.`, { id: "subscription-delete-plan-success" });
+      closeDeleteModal();
+    } catch (e) {
+      const msg = e?.message || e?.response?.data?.message || "Failed to delete plan";
+      toast.error(msg, { id: "subscription-delete-plan-error" });
+      if (e?.isAuthError) router.push("/login");
+    } finally {
+      setIsSaving(false);
     }
-    toast.success(`Plan "${plan.name}" deleted.`, { id: "subscription-delete-plan-success" });
-    closeDeleteModal();
   };
 
   return (
@@ -517,7 +547,10 @@ export default function SubscriptionAdminPage() {
         subtitle="Manage subscription plan offerings."
         stats={
           <p className="text-sm text-muted-foreground">
-            Total plans: <span className="font-semibold text-foreground">{totalPlans}</span>
+            Total plans:{" "}
+            <span className="font-semibold text-foreground">
+              {isLoadingPlans && !plans.length ? "…" : totalPlans}
+            </span>
             {/* {selectedPlan ? (
               <>
                 <span className="mx-2 text-muted-foreground/60">|</span>
@@ -527,7 +560,7 @@ export default function SubscriptionAdminPage() {
           </p>
         }
         actions={
-          <Button type="button" onClick={openAdd}>
+          <Button type="button" onClick={openAdd} disabled={isLoadingPlans}>
             <HiOutlinePlus className="h-4 w-4" />
             Add plan
           </Button>
@@ -569,6 +602,14 @@ export default function SubscriptionAdminPage() {
         </div> */}
 
         <div className="p-6 md:p-7">
+        {isLoadingPlans && !plans.length ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">Loading plans…</div>
+        ) : !plans.length ? (
+          <div className="py-16 text-center text-sm text-muted-foreground max-w-md mx-auto">
+            No subscription plans yet. Click <span className="font-semibold text-foreground">Add plan</span> to
+            create the first one.
+          </div>
+        ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {plans.map((p) => (
             <div
@@ -589,7 +630,9 @@ export default function SubscriptionAdminPage() {
                       {p.price}
                       <span className="text-xs font-medium text-muted-foreground">{p.period}</span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{p.features?.length ?? 0} features</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {(p.features?.length ?? 0) === 1 ? "1 feature" : `${p.features?.length ?? 0} features`}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -627,7 +670,7 @@ export default function SubscriptionAdminPage() {
                       variant="destructive"
                       className="justify-center"
                       onClick={() => requestDeletePlan(p.id)}
-                      disabled={plans.length <= 1}
+                      disabled={plans.length <= 1 || isSaving}
                     >
                       <HiOutlineTrash className="h-4 w-4" />
                       <span className="hidden sm:inline">Remove</span>
@@ -639,6 +682,7 @@ export default function SubscriptionAdminPage() {
             </div>
           ))}
         </div>
+        )}
         </div>
       </div>
 
@@ -880,13 +924,13 @@ export default function SubscriptionAdminPage() {
                         Cancel
                       </Button>
                       {modal.mode === "add" ? (
-                        <Button type="button" onClick={handleCreatePlan}>
+                        <Button type="button" onClick={handleCreatePlan} disabled={isSaving}>
                           <HiOutlinePlus className="h-4 w-4" />
                           Create plan
                         </Button>
                       ) : null}
                       {modal.mode === "edit" ? (
-                        <Button type="button" onClick={handleUpdatePlan}>
+                        <Button type="button" onClick={handleUpdatePlan} disabled={isSaving}>
                           <HiOutlinePencil className="h-4 w-4" />
                           Save
                         </Button>
@@ -928,7 +972,7 @@ export default function SubscriptionAdminPage() {
                     <Button type="button" variant="outline" onClick={closeDeleteModal}>
                       Cancel
                     </Button>
-                    <Button type="button" variant="destructive" onClick={confirmDeletePlan}>
+                    <Button type="button" variant="destructive" onClick={confirmDeletePlan} disabled={isSaving}>
                       <HiOutlineTrash className="h-4 w-4" />
                       Remove
                     </Button>
